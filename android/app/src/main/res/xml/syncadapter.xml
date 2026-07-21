@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No periodic sync happens through this — SamChatSyncAdapter.onPerformSync
+     is a no-op. We push contact rows directly from Dart right after
+     /contacts/sync succeeds (see ContactLinkPlugin.kt). This declaration
+     only exists because the Contacts Provider requires a registered sync
+     adapter for our account type before it'll accept RawContacts under it. -->
+<sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
+    android:contentAuthority="com.android.contacts"
+    android:accountType="com.samafricaonline.samchat"
+    android:userVisible="false"
+    android:supportsUploading="false"
+    android:allowParallelSyncs="false"
+    android:isAlwaysSyncable="false"/>

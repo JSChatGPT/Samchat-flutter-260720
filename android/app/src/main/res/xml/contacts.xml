@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tells the Contacts app how to render our custom Data row on a contact's
+     detail page (the "connected apps" chip) — icon + summary/detail text.
+     Tapping it fires ACTION_VIEW on that Data row's content URI with this
+     mimeType; OpenChatActivity's intent-filter below catches that. -->
+<ContactsSource xmlns:android="http://schemas.android.com/apk/res/android">
+    <ContactsDataKind
+        android:mimeType="vnd.android.cursor.item/vnd.com.samafricaonline.samchat.profile"
+        android:icon="@mipmap/ic_launcher"
+        android:summaryColumn="data1"
+        android:detailColumn="data2"/>
+</ContactsSource>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "917436439137",
+    "project_id": "samchatog",
+    "storage_bucket": "samchatog.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:917436439137:android:118cac2edd3316957a6820",
+        "android_client_info": {
+          "package_name": "com.samafricaonline.samchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPjGnH64SIwXkvK_akEPvYSfeK3CZlfa4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

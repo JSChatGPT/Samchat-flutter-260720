@@ -1,0 +1,26 @@
+name: samchat_telecom
+description: >
+  Internal-only bridge for SamChat's native Android Telecom (self-managed
+  ConnectionService) call integration. Not published — exists purely so its
+  native code is registered via GeneratedPluginRegistrant in *every*
+  FlutterEngine, including the headless one firebase_messaging spins up for
+  background/killed-app FCM handling, which a channel manually wired inside
+  MainActivity.configureFlutterEngine (like this app's SmsPlugin/
+  ContactLinkPlugin) never reaches.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.samafricaonline.samchat.telecom
+        pluginClass: SamchatTelecomPlugin

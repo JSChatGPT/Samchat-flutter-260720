@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.samafricaonline.samchat.telecom">
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
+
+    <application>
+        <service
+            android:name=".SamChatConnectionService"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService"/>
+            </intent-filter>
+        </service>
+        <receiver
+            android:name=".CallActionReceiver"
+            android:exported="false"/>
+    </application>
+</manifest>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declares a stub account type purely so the Contacts Provider will accept
+     RawContacts we insert under it — there's no real sign-in, see
+     SamChatAuthenticator.kt. This is what unlocks the "add a data row to an
+     existing contact via aggregation" trick used for the connected-apps chip. -->
+<account-authenticator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accountType="com.samafricaonline.samchat"
+    android:icon="@mipmap/ic_launcher"
+    android:smallIcon="@mipmap/ic_launcher"
+    android:label="@string/app_name"/>
