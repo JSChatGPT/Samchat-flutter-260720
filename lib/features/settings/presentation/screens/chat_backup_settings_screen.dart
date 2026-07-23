@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,75 +38,13 @@ class _ChatBackupSettingsScreenState extends ConsumerState<ChatBackupSettingsScr
     });
   }
 
-  Future<String?> _promptForPassword({required bool isChange}) async {
-    final passwordController = TextEditingController();
-    final confirmController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final result = await showModalBottomSheet<String>(
+  Future<String?> _promptForPassword({required bool isChange}) {
+    return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isChange ? 'Change backup password' : 'Set a backup password',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Only you know this password — if you lose it, this backup can never be '
-                'decrypted, not even by us. Choose something you\'ll remember, and write it '
-                'down somewhere safe.',
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 20),
-              AppTextField(
-                controller: passwordController,
-                label: 'Password',
-                obscureText: true,
-                autofocus: true,
-                validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
-              ),
-              const SizedBox(height: 12),
-              AppTextField(
-                controller: confirmController,
-                label: 'Confirm password',
-                obscureText: true,
-                validator: (v) => v != passwordController.text ? 'Passwords don\'t match' : null,
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (formKey.currentState?.validate() ?? false) {
-                      Navigator.pop(ctx, passwordController.text);
-                    }
-                  },
-                  child: Text(isChange ? 'Change password' : 'Enable backup'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (ctx) => _BackupPasswordSheet(isChange: isChange),
     );
-
-    passwordController.dispose();
-    confirmController.dispose();
-    return result;
   }
 
   Future<void> _enableOrChangeBackup({required bool isChange}) async {
@@ -119,6 +59,20 @@ class _ChatBackupSettingsScreenState extends ConsumerState<ChatBackupSettingsScr
       messenger.showSnackBar(SnackBar(content: Text(isChange ? 'Backup password changed' : 'Backup enabled')));
       await _refresh();
     } catch (e) {
+      // The user-facing message is deliberately generic (nobody needs to
+      // know about OAuth client SHA-1 fingerprints) — print the real cause
+      // during development instead of swallowing it entirely, since it's
+      // otherwise only visible by digging through adb logcat. For a Drive
+      // API error specifically, the useful detail is in the response body
+      // (Google's JSON error payload — e.g. "Drive API not enabled" vs.
+      // "insufficient permission"), not in DioException's own message.
+      if (kDebugMode) {
+        if (e is DioException) {
+          debugPrint('Chat backup enable failed: HTTP ${e.response?.statusCode} — ${e.response?.data}');
+        } else {
+          debugPrint('Chat backup enable failed: $e');
+        }
+      }
       if (!mounted) return;
       setState(() => _loading = false);
       messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t reach your cloud storage. Try again.')));
@@ -193,6 +147,94 @@ class _ChatBackupSettingsScreenState extends ConsumerState<ChatBackupSettingsScr
                     ],
                   ],
                 ),
+    );
+  }
+}
+
+/// Owns its own controllers so they're disposed at the right time by
+/// Flutter's own State lifecycle — a bottom sheet's builder keeps rebuilding
+/// during its close animation even after showModalBottomSheet's Future has
+/// already completed, so controllers created and disposed manually around
+/// the await (as this used to do) get disposed while still in use.
+class _BackupPasswordSheet extends StatefulWidget {
+  const _BackupPasswordSheet({required this.isChange});
+
+  final bool isChange;
+
+  @override
+  State<_BackupPasswordSheet> createState() => _BackupPasswordSheetState();
+}
+
+class _BackupPasswordSheetState extends State<_BackupPasswordSheet> {
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      Navigator.pop(context, _passwordController.text);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.isChange ? 'Change backup password' : 'Set a backup password',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Only you know this password — if you lose it, this backup can never be '
+              'decrypted, not even by us. Choose something you\'ll remember, and write it '
+              'down somewhere safe.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              controller: _passwordController,
+              label: 'Password',
+              obscureText: true,
+              autofocus: true,
+              validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              controller: _confirmController,
+              label: 'Confirm password',
+              obscureText: true,
+              validator: (v) => v != _passwordController.text ? 'Passwords don\'t match' : null,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _submit,
+                child: Text(widget.isChange ? 'Change password' : 'Enable backup'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
