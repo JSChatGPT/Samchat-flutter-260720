@@ -42,15 +42,25 @@ class ChatDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
-  final _scrollController = ScrollController();
+  final _itemScrollController = ItemScrollController();
+  final _itemPositionsListener = ItemPositionsListener.create();
   ChatMessage? _replyingTo;
   // Captured in initState — `ref` itself cannot be used inside dispose().
   late final PushService _pushService;
 
+  // Kept in sync with _buildMessageList's own local `reversedItems` on every
+  // build — the item-positions listener fires outside build and needs to
+  // know how many items exist right now to decide "near the oldest-loaded
+  // end, time to fetch another page."
+  int _reversedItemsLength = 0;
+
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
+
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    _itemPositionsListener.itemPositions.addListener(_onItemPositionsChanged);
     _pushService = ref.read(pushServiceProvider);
     _pushService.currentlyOpenChatId = widget.chatId;
   }
@@ -60,16 +70,73 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     if (_pushService.currentlyOpenChatId == widget.chatId) {
       _pushService.currentlyOpenChatId = null;
     }
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _itemPositionsListener.itemPositions.removeListener(_onItemPositionsChanged);
+    _highlightTimer?.cancel();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    if (_scrollController.position.maxScrollExtent - _scrollController.position.pixels <= 200) {
+  void _onItemPositionsChanged() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty || _reversedItemsLength == 0) return;
+    final maxIndex = positions.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+    // reverse:true + index 0 = newest, so the highest visible index is the
+    // one closest to the oldest end of what's currently loaded.
+    if (maxIndex >= _reversedItemsLength - 5) {
       ref.read(chatDetailNotifierProvider(widget.chatId).notifier).loadMoreOlder();
     }
+  }
+
+  List<_ListItem> _buildItems(List<ChatMessage> messages) {
+    final items = <_ListItem>[];
+    DateTime? lastDate;
+    for (final message in messages) {
+      if (lastDate == null || !AppDateUtils.isSameDay(lastDate, message.createdAt)) {
+        items.add(_ListItem.date(message.createdAt));
+        lastDate = message.createdAt;
+      }
+      items.add(_ListItem.message(message));
+    }
+    return items;
+  }
+
+  /// Tapping a reply's quoted preview jumps to and briefly highlights the
+  /// original message — WhatsApp-style. Falls back to fetching older pages
+  /// (bounded) when the target isn't loaded yet, since a reply can quote
+  /// something from well before the current pagination window.
+  Future<void> _scrollToMessage(String messageId) async {
+    final notifier = ref.read(chatDetailNotifierProvider(widget.chatId).notifier);
+    var attempts = 0;
+    while (attempts < 20) {
+      final current = ref.read(chatDetailNotifierProvider(widget.chatId));
+      if (current.messages.any((m) => m.id == messageId)) break;
+      if (!current.hasMoreOlder) break;
+      await notifier.loadMoreOlder();
+      attempts++;
+    }
+    if (!mounted) return;
+
+    final messages = ref.read(chatDetailNotifierProvider(widget.chatId)).messages;
+    final reversedItems = _buildItems(messages).reversed.toList();
+    final index = reversedItems.indexWhere((item) => item.message?.id == messageId);
+    if (index == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Original message not found')),
+      );
+      return;
+    }
+
+    await _itemScrollController.scrollTo(
+      index: index,
+      alignment: 0.4,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+    if (!mounted) return;
+    _highlightTimer?.cancel();
+    setState(() => _highlightedMessageId = messageId);
+    _highlightTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _highlightedMessageId = null);
+    });
   }
 
   void _send(String text) {
@@ -439,21 +506,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       );
     }
 
-    final items = <_ListItem>[];
-    DateTime? lastDate;
-    for (final message in state.messages) {
-      if (lastDate == null || !AppDateUtils.isSameDay(lastDate, message.createdAt)) {
-        items.add(_ListItem.date(message.createdAt));
-        lastDate = message.createdAt;
-      }
-      items.add(_ListItem.message(message));
-    }
+    final reversedItems = _buildItems(state.messages).reversed.toList();
+    _reversedItemsLength = reversedItems.length;
 
-    final reversedItems = items.reversed.toList();
-
-    return ListView.builder(
+    return ScrollablePositionedList.builder(
       reverse: true,
-      controller: _scrollController,
+      itemScrollController: _itemScrollController,
+      itemPositionsListener: _itemPositionsListener,
       padding: const EdgeInsets.symmetric(vertical: 12),
       itemCount: reversedItems.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -478,6 +537,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           onLongPress: message.sendStatus == SendStatus.sending
               ? null
               : () => _showMessageActions(message, isMine),
+          onQuotedMessageTap: _scrollToMessage,
+          isHighlighted: message.id == _highlightedMessageId,
         );
       },
     );
