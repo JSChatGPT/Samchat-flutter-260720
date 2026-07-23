@@ -118,6 +118,16 @@ class PushService {
         payload: 'message:$chatId',
       );
     }
+    if (type == 'reaction') {
+      final chatId = data['chat_id']?.toString();
+      if (chatId != null && chatId == currentlyOpenChatId) return; // suppress banner for open chat
+      _notifications.showMessageNotification(
+        id: data['message_id']?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+        title: data['title']?.toString() ?? 'New reaction',
+        body: data['body']?.toString() ?? '',
+        payload: 'message:$chatId',
+      );
+    }
     if (type == 'new_email') {
       // The `NewEmailReceived` socket event (see email_notifier.dart's
       // emailRealtimeListenerProvider) already refreshes the badge counts
@@ -139,7 +149,7 @@ class PushService {
     final data = message.data;
     if (data['type'] == 'incoming_call') {
       _navigationController.add(PushNavigationTarget(PushNavigationType.incomingCall, callId: data['call_id']));
-    } else if (data['type'] == 'message') {
+    } else if (data['type'] == 'message' || data['type'] == 'reaction') {
       _navigationController.add(PushNavigationTarget(PushNavigationType.chat, chatId: data['chat_id']));
     } else if (data['type'] == 'new_email') {
       _navigationController.add(PushNavigationTarget(PushNavigationType.email, emailAccountId: data['email_account_id']));

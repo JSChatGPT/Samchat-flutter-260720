@@ -15,6 +15,7 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.isMine,
+    required this.myUserId,
     this.senderName,
     this.onRetry,
     this.onLongPress,
@@ -22,6 +23,7 @@ class MessageBubble extends StatelessWidget {
 
   final ChatMessage message;
   final bool isMine;
+  final String myUserId;
   final String? senderName;
   final VoidCallback? onRetry;
   final VoidCallback? onLongPress;
@@ -38,6 +40,25 @@ class MessageBubble extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
           child: PaymentRequestBubble(message: message, isMine: isMine, chatId: message.chatId),
+        ),
+      );
+    }
+
+    // Stickers render as an oversized, bubble-less emoji — same idea as
+    // WhatsApp's own auto-enlarge treatment for a lone-emoji message.
+    if (message.messageType == MessageType.sticker) {
+      return Align(
+        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: EdgeInsets.only(left: isMine ? 64 : 12, right: isMine ? 12 : 64, top: 2, bottom: 2),
+          child: Column(
+            crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message.content ?? '🎉', style: const TextStyle(fontSize: 72)),
+              if (message.reactions.isNotEmpty) _ReactionPills(reactions: message.reactions, myUserId: myUserId),
+            ],
+          ),
         ),
       );
     }
@@ -93,10 +114,20 @@ class MessageBubble extends StatelessWidget {
                 const SizedBox(height: 2),
               ],
               if (message.quotedMessage != null) ...[
-                QuotedMessageWidget(message: message.quotedMessage!, dense: true),
+                QuotedMessageWidget(
+                  message: message.quotedMessage!,
+                  dense: true,
+                  senderLabel: message.quotedMessage!.isMine(myUserId)
+                      ? 'You'
+                      : message.quotedMessage!.sender?.displayName,
+                ),
                 const SizedBox(height: 6),
               ],
               _buildContent(context, textColor),
+              if (message.reactions.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                _ReactionPills(reactions: message.reactions, myUserId: myUserId),
+              ],
               const SizedBox(height: 2),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -136,7 +167,8 @@ class MessageBubble extends StatelessWidget {
       case MessageType.file:
         return _FileContent(message: message, textColor: textColor);
       case MessageType.paymentRequest:
-        // Handled by the early return in build() above.
+      case MessageType.sticker:
+        // Both handled by early returns in build() above.
         return const SizedBox.shrink();
       case MessageType.callLog:
         return _CallLogContent(message: message, isMine: isMine, textColor: textColor);
@@ -316,5 +348,51 @@ class _StatusIcon extends StatelessWidget {
       case SendStatus.read:
         return Icon(Icons.done_all_rounded, size: 14, color: AppColors.tickRead);
     }
+  }
+}
+
+/// Reactions grouped by emoji with a count — the current user's own
+/// reaction gets a tinted border, mirroring the highlight WhatsApp gives
+/// your own reaction pill.
+class _ReactionPills extends StatelessWidget {
+  const _ReactionPills({required this.reactions, required this.myUserId});
+
+  final List<MessageReaction> reactions;
+  final String myUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final counts = <String, int>{};
+    final mine = <String>{};
+    for (final r in reactions) {
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+      if (r.userId == myUserId) mine.add(r.emoji);
+    }
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: counts.entries.map((entry) {
+        final isMine = mine.contains(entry.key);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: isMine ? scheme.primary : scheme.outlineVariant, width: isMine ? 1.5 : 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(entry.key, style: const TextStyle(fontSize: 13)),
+              if (entry.value > 1) ...[
+                const SizedBox(width: 3),
+                Text('${entry.value}', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }

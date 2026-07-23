@@ -33,6 +33,7 @@ class Endpoints {
   // Messages
   static String messages(String chatId) => '/chats/$chatId/messages';
   static String markMessageRead(String messageId) => '/messages/$messageId/read';
+  static String reactToMessage(String messageId) => '/messages/$messageId/react';
   static String deleteMessage(String messageId) => '/messages/$messageId';
   static String bulkDeleteMessages(String chatId) => '/chats/$chatId/messages/bulk';
   static String clearChatMessages(String chatId) => '/chats/$chatId/messages';

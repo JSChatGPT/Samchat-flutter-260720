@@ -111,6 +111,15 @@ class MessagesRepository {
     }
   }
 
+  Future<List<MessageReaction>> react(String messageId, String emoji) async {
+    try {
+      final res = await _dio.post(Endpoints.reactToMessage(messageId), data: {'emoji': emoji});
+      return asList(res.data['reactions'], (e) => MessageReaction.fromJson(asMap(e)));
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<void> markRead(String messageId) async {
     try {
       await _dio.post(Endpoints.markMessageRead(messageId));

@@ -15,6 +15,7 @@ import '../../features/chats/presentation/screens/share_target_screen.dart';
 import '../../features/email/presentation/screens/email_accounts_screen.dart';
 import '../../features/groups/presentation/screens/create_group_screen.dart';
 import '../../features/groups/presentation/screens/group_info_screen.dart';
+import '../../features/groups/presentation/screens/groups_list_screen.dart';
 import '../../features/home_shell/presentation/home_shell_screen.dart';
 import '../../features/meetings/presentation/screens/meeting_list_screen.dart';
 import '../../features/meetings/presentation/screens/schedule_meeting_screen.dart';
@@ -212,6 +213,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: RoutePaths.statuses,
               name: RouteNames.statuses,
               builder: (context, state) => const StatusListScreen(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: RoutePaths.groups,
+              name: RouteNames.groups,
+              builder: (context, state) => const GroupsListScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [

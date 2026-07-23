@@ -19,6 +19,7 @@ class RealtimeEventNames {
 
   static const messageSent = 'MessageSent';
   static const messagesRead = 'MessagesRead';
+  static const messageReactionUpdated = 'MessageReactionUpdated';
   static const userTyping = 'UserTyping';
   static const incomingCall = 'IncomingCall';
   static const callAnswered = 'CallAnswered';

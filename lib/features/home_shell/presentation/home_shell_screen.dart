@@ -21,7 +21,7 @@ class HomeShellScreen extends ConsumerStatefulWidget {
 class _HomeShellScreenState extends ConsumerState<HomeShellScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  static const _tabCount = 5;
+  static const _tabCount = 6;
 
   @override
   void initState() {
@@ -135,6 +135,7 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> with SingleTi
             tabs: [
               _tabWithBadge('CHATS', unreadChatsCount),
               const Tab(text: 'STATUS'),
+              const Tab(text: 'GROUPS'),
               const Tab(text: 'CALLS'),
               _tabWithBadge('SMS', unreadSmsCount),
               _tabWithBadge('EMAIL', unreadEmailCount),

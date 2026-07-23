@@ -2,7 +2,7 @@ import '../core/utils/json_utils.dart';
 import '../core/utils/url_utils.dart';
 import 'user.dart';
 
-enum MessageType { text, image, video, audio, file, callLog, paymentRequest, unknown }
+enum MessageType { text, image, video, audio, file, sticker, callLog, paymentRequest, unknown }
 
 MessageType messageTypeFromString(String? raw) {
   switch (raw) {
@@ -16,6 +16,8 @@ MessageType messageTypeFromString(String? raw) {
       return MessageType.audio;
     case 'file':
       return MessageType.file;
+    case 'sticker':
+      return MessageType.sticker;
     case 'call_log':
       return MessageType.callLog;
     case 'payment_request':
@@ -37,12 +39,30 @@ String messageTypeToString(MessageType type) {
       return 'audio';
     case MessageType.file:
       return 'file';
+    case MessageType.sticker:
+      return 'sticker';
     case MessageType.callLog:
       return 'call_log';
     case MessageType.paymentRequest:
       return 'payment_request';
     case MessageType.unknown:
       return 'text';
+  }
+}
+
+/// A single user's reaction to a message (one per user per message — see
+/// ChatDetailNotifier.toggleReaction for the toggle/replace semantics).
+class MessageReaction {
+  const MessageReaction({required this.userId, required this.emoji});
+
+  final String userId;
+  final String emoji;
+
+  factory MessageReaction.fromJson(Map<String, dynamic> json) {
+    return MessageReaction(
+      userId: asString(json['user_id']),
+      emoji: asString(json['emoji']),
+    );
   }
 }
 
@@ -69,6 +89,7 @@ class ChatMessage {
     this.sendStatus = SendStatus.sent,
     this.clientTempId,
     this.deletedForMe = false,
+    this.reactions = const [],
   });
 
   final String id;
@@ -88,6 +109,7 @@ class ChatMessage {
   final SendStatus sendStatus;
   final String? clientTempId;
   final bool deletedForMe;
+  final List<MessageReaction> reactions;
 
   bool isMine(String myUserId) => senderId == myUserId;
 
@@ -103,6 +125,8 @@ class ChatMessage {
         return '🎤 Voice note';
       case MessageType.file:
         return '📎 ${fileName ?? 'File'}';
+      case MessageType.sticker:
+        return '${content ?? '🩵'} Sticker';
       case MessageType.callLog:
         return '📞 Call';
       case MessageType.paymentRequest:
@@ -133,6 +157,7 @@ class ChatMessage {
       createdAt: asDateTimeOrNull(json['created_at']) ?? DateTime.now(),
       isReadByRecipient: asBool(json['is_read']) || asStringOrNull(json['read_at']) != null,
       sendStatus: SendStatus.sent,
+      reactions: asList(json['reactions'], (e) => MessageReaction.fromJson(asMap(e))),
     );
   }
 
@@ -142,6 +167,7 @@ class ChatMessage {
     bool? isReadByRecipient,
     bool? deletedForMe,
     String? content,
+    List<MessageReaction>? reactions,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -161,6 +187,7 @@ class ChatMessage {
       sendStatus: sendStatus ?? this.sendStatus,
       clientTempId: clientTempId,
       deletedForMe: deletedForMe ?? this.deletedForMe,
+      reactions: reactions ?? this.reactions,
     );
   }
 }

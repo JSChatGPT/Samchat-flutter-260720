@@ -172,6 +172,35 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
     }
   }
 
+  /// Toggle semantics mirror the backend (`ChatController::reactToMessage`):
+  /// tapping the same emoji again removes my reaction, tapping a different
+  /// one replaces it. Optimistic locally, then reconciled with the server's
+  /// authoritative reactions list once the request resolves.
+  Future<void> toggleReaction(ChatMessage message, String emoji) async {
+    final existing = message.reactions.where((r) => r.userId == myUserId).firstOrNull;
+    final optimistic = [...message.reactions.where((r) => r.userId != myUserId)];
+    if (existing?.emoji != emoji) {
+      optimistic.add(MessageReaction(userId: myUserId, emoji: emoji));
+    }
+    _updateMessageReactions(message.id, optimistic);
+    try {
+      final serverReactions = await repository.react(message.id, emoji);
+      _updateMessageReactions(message.id, serverReactions);
+    } on ApiException {
+      // Revert to the pre-optimistic state on failure.
+      _updateMessageReactions(message.id, message.reactions);
+    }
+  }
+
+  void _updateMessageReactions(String messageId, List<MessageReaction> reactions) {
+    if (!mounted) return;
+    state = state.copyWith(
+      messages: state.messages
+          .map((m) => m.id == messageId ? m.copyWith(reactions: reactions) : m)
+          .toList(),
+    );
+  }
+
   Future<void> deleteMessage(ChatMessage message, {required bool forEveryone}) async {
     try {
       await repository.deleteMessage(message.id, forEveryone: forEveryone);
@@ -292,6 +321,16 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
         final updated = {...state.typingUserIds};
         isTyping ? updated.add(userId) : updated.remove(userId);
         state = state.copyWith(typingUserIds: updated);
+        break;
+      case RealtimeEventNames.messageReactionUpdated:
+        final messageId = event.data['message_id']?.toString();
+        final reactionsRaw = event.data['reactions'];
+        if (messageId == null || reactionsRaw is! List) return;
+        final reactions = reactionsRaw
+            .whereType<Map>()
+            .map((e) => MessageReaction.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        _updateMessageReactions(messageId, reactions);
         break;
     }
   }

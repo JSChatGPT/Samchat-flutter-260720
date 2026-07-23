@@ -1,3 +1,4 @@
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,6 +99,34 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     setState(() => _replyingTo = null);
   }
 
+  void _sendSticker(String emoji) {
+    ref.read(chatDetailNotifierProvider(widget.chatId).notifier).sendMessage(
+          type: MessageType.sticker,
+          content: emoji,
+          quotedMessageId: _replyingTo?.id,
+        );
+    setState(() => _replyingTo = null);
+  }
+
+  static const _quickReactEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+  Future<void> _openFullEmojiReactionPicker(ChatMessage message) async {
+    final emoji = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SizedBox(
+        height: 320,
+        child: EmojiPicker(
+          onEmojiSelected: (category, e) => Navigator.pop(ctx, e.emoji),
+          config: const Config(height: 300),
+        ),
+      ),
+    );
+    if (emoji != null && mounted) {
+      ref.read(chatDetailNotifierProvider(widget.chatId).notifier).toggleReaction(message, emoji);
+    }
+  }
+
   void _showMessageActions(ChatMessage message, bool isMine) {
     showModalBottomSheet(
       context: context,
@@ -105,6 +134,38 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (final emoji in _quickReactEmojis)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        ref.read(chatDetailNotifierProvider(widget.chatId).notifier).toggleReaction(message, emoji);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      ),
+                    ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _openFullEmojiReactionPicker(message);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.reply_outlined),
               title: const Text('Reply'),
@@ -341,6 +402,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             onSend: _send,
             onAttach: _pickAttachment,
             onVoiceNote: _sendVoiceNote,
+            onSendSticker: _sendSticker,
             onSendPayment: chat != null ? () => _openSendPayment(state, myUserId, other) : null,
             replyPreview: _replyingTo != null
                 ? QuotedMessageWidget(
@@ -402,6 +464,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         return MessageBubble(
           message: message,
           isMine: isMine,
+          myUserId: myUserId,
           senderName: (state.chat?.isGroup ?? false) && !isMine ? message.sender?.displayName : null,
           onRetry: message.sendStatus == SendStatus.failed
               ? () => ref.read(chatDetailNotifierProvider(widget.chatId).notifier).retry(message)

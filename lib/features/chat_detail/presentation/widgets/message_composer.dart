@@ -1,10 +1,21 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:uuid/uuid.dart';
+
+/// Curated "sticker" tray — no sticker art pipeline exists, so this ships as
+/// large single emoji sent instantly (mirrors WhatsApp's own oversized-emoji
+/// rendering for a lone-emoji message). Kept identical to the picker used by
+/// the web client for visual parity across platforms.
+const kStickerEmojis = [
+  '🎉', '❤️', '😂', '😍', '😢', '😮', '🙏', '🔥',
+  '👍', '👏', '🥳', '😎', '🤔', '😴', '🤗', '😇',
+  '🥰', '😜', '🤯', '💯', '✨', '🎂', '🌈', '☕',
+];
 
 class MessageComposer extends StatefulWidget {
   const MessageComposer({
@@ -13,6 +24,7 @@ class MessageComposer extends StatefulWidget {
     required this.onSend,
     required this.onChanged,
     required this.onVoiceNote,
+    required this.onSendSticker,
     this.onAttach,
     this.onSendPayment,
     this.replyPreview,
@@ -23,6 +35,7 @@ class MessageComposer extends StatefulWidget {
   final void Function(String text) onSend;
   final void Function(String text) onChanged;
   final void Function(String path, Duration duration) onVoiceNote;
+  final void Function(String emoji) onSendSticker;
   final VoidCallback? onAttach;
   final VoidCallback? onSendPayment;
   final Widget? replyPreview;
@@ -32,20 +45,39 @@ class MessageComposer extends StatefulWidget {
   State<MessageComposer> createState() => _MessageComposerState();
 }
 
-class _MessageComposerState extends State<MessageComposer> {
+class _MessageComposerState extends State<MessageComposer> with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   final _recorder = AudioRecorder();
+  late final TabController _pickerTabController;
   bool _hasText = false;
   bool _isRecording = false;
+  bool _showPicker = false;
   Duration _recordDuration = Duration.zero;
   Timer? _recordTimer;
 
   @override
+  void initState() {
+    super.initState();
+    _pickerTabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
+    _pickerTabController.dispose();
     _recordTimer?.cancel();
     _recorder.dispose();
     super.dispose();
+  }
+
+  void _togglePicker() {
+    FocusScope.of(context).unfocus();
+    setState(() => _showPicker = !_showPicker);
+  }
+
+  void _sendSticker(String emoji) {
+    widget.onSendSticker(emoji);
+    setState(() => _showPicker = false);
   }
 
   void _submit() {
@@ -122,9 +154,57 @@ class _MessageComposerState extends State<MessageComposer> {
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
               child: _isRecording ? _buildRecordingRow(scheme) : _buildTextRow(scheme),
             ),
+            if (_showPicker) _buildPicker(scheme),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPicker(ColorScheme scheme) {
+    return SizedBox(
+      height: 280,
+      child: Column(
+        children: [
+          TabBar(
+            controller: _pickerTabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.emoji_emotions_outlined), text: 'Emoji'),
+              Tab(icon: Icon(Icons.auto_awesome_outlined), text: 'Stickers'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _pickerTabController,
+              children: [
+                EmojiPicker(
+                  textEditingController: _controller,
+                  onEmojiSelected: (category, emoji) =>
+                      setState(() => _hasText = _controller.text.trim().isNotEmpty),
+                  config: const Config(height: 230),
+                ),
+                _buildStickerGrid(scheme),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStickerGrid(ColorScheme scheme) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(8),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6),
+      itemCount: kStickerEmojis.length,
+      itemBuilder: (context, index) {
+        final emoji = kStickerEmojis[index];
+        return InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _sendSticker(emoji),
+          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 30))),
+        );
+      },
     );
   }
 
@@ -175,7 +255,16 @@ class _MessageComposerState extends State<MessageComposer> {
               minLines: 1,
               maxLines: 5,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Message'),
+              decoration: InputDecoration(
+                hintText: 'Message',
+                prefixIcon: IconButton(
+                  icon: Icon(
+                    _showPicker ? Icons.keyboard_outlined : Icons.emoji_emotions_outlined,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onPressed: _togglePicker,
+                ),
+              ),
               onChanged: (v) {
                 widget.onChanged(v);
                 setState(() => _hasText = v.trim().isNotEmpty);

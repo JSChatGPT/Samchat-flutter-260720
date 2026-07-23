@@ -9,6 +9,7 @@ class RouteNames {
   static const home = 'home';
   static const chats = 'chats';
   static const statuses = 'statuses';
+  static const groups = 'groups';
   static const calls = 'calls';
   static const sampay = 'sampay';
   static const settings = 'settings';
@@ -53,6 +54,7 @@ class RoutePaths {
   static const home = chats;
   static const chats = '/chats';
   static const statuses = '/statuses';
+  static const groups = '/groups';
   static const calls = '/calls';
   static const sampay = '/sampay';
   static const settings = '/settings';
