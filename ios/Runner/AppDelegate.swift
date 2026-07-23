@@ -12,5 +12,10 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // See ICloudBackupChannel.swift — unverified, no macOS/Xcode available
+    // in the environment this was written in.
+    let icloudRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "ICloudBackupChannel")
+    ICloudBackupChannel.register(with: icloudRegistrar)
   }
 }

@@ -108,8 +108,20 @@ class InboxNotifier extends StateNotifier<InboxState> {
         chats: _sorted(result.chats),
         blockedUserIds: result.blockedUserIds,
       );
+      _healAllChats(result.chats);
     } on ApiException catch (e) {
       state = state.copyWith(status: InboxLoadStatus.error, error: e.message);
+    }
+  }
+
+  /// Proactively reseals every chat's key (wherever this device already
+  /// holds one) to any participant device missing a grant — turns "the next
+  /// message someone sends repairs a reinstalled device" into "the next
+  /// time *anyone* opens the app repairs it." Cheap: healMissingGrants
+  /// no-ops immediately for any chat this device doesn't hold a key for.
+  void _healAllChats(List<Chat> chats) {
+    for (final chat in chats) {
+      unawaited(e2ee.healMissingGrants(chat.id).catchError((_) {}));
     }
   }
 

@@ -96,6 +96,13 @@ class SettingsHomeScreen extends ConsumerWidget {
             title: const Text('Blocked users'),
             onTap: () => context.pushNamed(RouteNames.blockedUsers),
           ),
+          if (Platform.isAndroid || Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('Chat backup'),
+              subtitle: const Text('Restore your chats if you switch phones'),
+              onTap: () => context.pushNamed(RouteNames.chatBackupSettings),
+            ),
           ListTile(
             leading: const Icon(Icons.dark_mode_outlined),
             title: const Text('Theme'),

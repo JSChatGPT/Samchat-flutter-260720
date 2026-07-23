@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/crypto/backup/backup_service_provider.dart';
 import 'core/crypto/e2ee_realtime_listener.dart';
 import 'core/native/app_intent_channel.dart';
 import 'core/providers/core_providers.dart';
@@ -92,6 +93,34 @@ class _SamChatAppState extends ConsumerState<SamChatApp> with WidgetsBindingObse
     }
   }
 
+  /// Generates this device's E2EE keypair on first run (or loads it) and
+  /// makes sure the backend has the current public key — except on a
+  /// device with no local identity yet (fresh install, reinstall, or new
+  /// phone) that has an encrypted cloud backup available, where it routes
+  /// to a restore screen instead of silently generating a brand-new,
+  /// unrelated identity that would leave every existing chat unreadable.
+  /// That screen calls ensureDeviceRegistered itself once it's done
+  /// (restored or skipped). Never blocks login either way — chats just
+  /// stay unencrypted/unreadable until this lands.
+  Future<void> _setupE2eeIdentity(GoRouter router) async {
+    final e2ee = ref.read(e2eeServiceProvider);
+    try {
+      if (await e2ee.hasLocalIdentity()) {
+        await e2ee.ensureDeviceRegistered();
+        return;
+      }
+      final backup = ref.read(chatBackupServiceProvider);
+      if (backup.isSupported && await backup.hasCloudBackup()) {
+        router.pushNamed(RouteNames.chatBackupRestore);
+        return;
+      }
+      await e2ee.ensureDeviceRegistered();
+    } catch (_) {
+      // Best-effort — chats just stay unencrypted/unreadable until a later
+      // attempt succeeds.
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final heartbeat = ref.read(heartbeatServiceProvider);
@@ -152,10 +181,7 @@ class _SamChatAppState extends ConsumerState<SamChatApp> with WidgetsBindingObse
     ref.listen(authNotifierProvider, (previous, next) {
       if (previous?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
         ref.read(heartbeatServiceProvider).onResumed();
-        // Best-effort: generates this device's E2EE keypair on first run (or
-        // loads it) and makes sure the backend has the current public key.
-        // Never blocks login — chats just stay unencrypted until this lands.
-        ref.read(e2eeServiceProvider).ensureDeviceRegistered().catchError((_) {});
+        _setupE2eeIdentity(router);
       } else if (next.status == AuthStatus.unauthenticated) {
         ref.read(heartbeatServiceProvider).onPaused();
       }

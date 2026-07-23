@@ -16,6 +16,8 @@ import '../../features/email/presentation/screens/email_accounts_screen.dart';
 import '../../features/groups/presentation/screens/create_group_screen.dart';
 import '../../features/groups/presentation/screens/group_info_screen.dart';
 import '../../features/groups/presentation/screens/groups_list_screen.dart';
+import '../../features/settings/presentation/screens/chat_backup_restore_screen.dart';
+import '../../features/settings/presentation/screens/chat_backup_settings_screen.dart';
 import '../../features/home_shell/presentation/home_shell_screen.dart';
 import '../../features/meetings/presentation/screens/meeting_list_screen.dart';
 import '../../features/meetings/presentation/screens/schedule_meeting_screen.dart';
@@ -104,6 +106,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.groupInfo,
         name: RouteNames.groupInfo,
         builder: (context, state) => GroupInfoScreen(chatId: state.pathParameters['chatId']!),
+      ),
+      GoRoute(
+        path: RoutePaths.chatBackupRestore,
+        name: RouteNames.chatBackupRestore,
+        builder: (context, state) => const ChatBackupRestoreScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.chatBackupSettings,
+        name: RouteNames.chatBackupSettings,
+        builder: (context, state) => const ChatBackupSettingsScreen(),
       ),
       GoRoute(
         path: RoutePaths.statusViewer,

@@ -17,6 +17,7 @@ class LocalPrefsService {
   static const _appLockEnabledKey = 'app_lock_enabled';
   static const _appLockTimeoutKey = 'app_lock_timeout';
   static const _batteryOptPromptedKey = 'battery_opt_prompted';
+  static const _chatBackupEnabledKey = 'chat_backup_enabled';
 
   String? get themeMode => _prefs.getString(_themeModeKey);
   Future<void> setThemeMode(String mode) => _prefs.setString(_themeModeKey, mode);
@@ -37,6 +38,13 @@ class LocalPrefsService {
   // exemption prompt (see PushService) shouldn't reappear on every re-login.
   bool get batteryOptimizationPrompted => _prefs.getBool(_batteryOptPromptedKey) ?? false;
   Future<void> setBatteryOptimizationPrompted(bool v) => _prefs.setBool(_batteryOptPromptedKey, v);
+
+  // Device-level, not cleared on logout — mirrors appLockEnabled. Tracked
+  // locally purely for the Settings UI's status display; the cloud
+  // provider itself (see ChatBackupProvider.hasBackup) is the actual
+  // source of truth for whether a backup exists.
+  bool get chatBackupEnabled => _prefs.getBool(_chatBackupEnabledKey) ?? false;
+  Future<void> setChatBackupEnabled(bool v) => _prefs.setBool(_chatBackupEnabledKey, v);
 
   int get lastTabIndex => _prefs.getInt(_lastTabKey) ?? 0;
   Future<void> setLastTabIndex(int v) => _prefs.setInt(_lastTabKey, v);

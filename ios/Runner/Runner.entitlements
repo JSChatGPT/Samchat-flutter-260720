@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Required for ICloudBackupChannel.swift's NSUbiquitousKeyValueStore usage
+	(see lib/core/crypto/backup/ios_icloud_backup_provider.dart). This file
+	alone is NOT enough to enable the capability — it also needs to be wired
+	into the Xcode project (CODE_SIGN_ENTITLEMENTS build setting) and
+	associated with a provisioning profile that has the iCloud capability
+	enabled. The reliable way to do that is opening ios/Runner.xcworkspace
+	in Xcode and turning on "iCloud" -> "Key-value storage" under
+	Signing & Capabilities for the Runner target, which handles all of the
+	above automatically. This file was written in a Linux-only environment
+	with no Xcode available, so none of that wiring has been done or
+	verified yet.
+	-->
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+</dict>
+</plist>

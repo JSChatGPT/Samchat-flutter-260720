@@ -25,6 +25,8 @@ class RouteNames {
   static const contactPicker = 'contactPicker';
   static const createGroup = 'createGroup';
   static const groupInfo = 'groupInfo';
+  static const chatBackupRestore = 'chatBackupRestore';
+  static const chatBackupSettings = 'chatBackupSettings';
 
   static const statusViewer = 'statusViewer';
   static const statusCreate = 'statusCreate';
@@ -69,6 +71,8 @@ class RoutePaths {
   static const contactPicker = '/contact-picker';
   static const createGroup = '/create-group';
   static const groupInfo = '/chat/:chatId/group-info';
+  static const chatBackupRestore = '/chat-backup/restore';
+  static const chatBackupSettings = '/settings/chat-backup';
 
   static const statusViewer = '/status-viewer/:userId';
   static const statusCreate = '/status-create';

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/crypto/e2ee_service.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/realtime/pusher_service.dart';
 import '../../../core/realtime/realtime_events.dart';
@@ -71,6 +72,7 @@ final chatDetailNotifierProvider = StateNotifierProvider.autoDispose
     repository: ref.watch(messagesRepositoryProvider),
     pusher: ref.watch(pusherServiceProvider),
     myUserId: ref.watch(currentUserIdProvider),
+    e2ee: ref.watch(e2eeServiceProvider),
   );
   ref.onDispose(notifier.disposeSubscription);
   return notifier;
@@ -82,6 +84,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
     required this.repository,
     required this.pusher,
     required this.myUserId,
+    required this.e2ee,
   }) : super(const ChatDetailState()) {
     pusher.subscribe(RealtimeChannels.chat(chatId));
     _sub = pusher.events.listen(_onRealtimeEvent);
@@ -92,6 +95,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
   final MessagesRepository repository;
   final PusherService pusher;
   final String myUserId;
+  final E2eeService e2ee;
   StreamSubscription? _sub;
   Timer? _typingStopTimer;
   bool _iAmTyping = false;
@@ -112,6 +116,14 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
         hasMoreOlder: result.messages.hasMore,
         currentPage: result.messages.currentPage,
       );
+      // Opportunistically reseals this chat's key to any participant
+      // device that's missing a grant (a reinstalled/new phone) — turns
+      // "the next message someone sends repairs it" into "the next time
+      // *anyone* opens this chat repairs it," closing the liveness gap
+      // where the realtime grant-request only works if another key-holder
+      // happens to be online at that exact moment. No-op if this device
+      // doesn't hold the chat's key itself.
+      unawaited(e2ee.healMissingGrants(chatId).catchError((_) {}));
     } on ApiException catch (e) {
       if (!mounted) return;
       state = state.copyWith(isLoadingInitial: false, error: e.message);

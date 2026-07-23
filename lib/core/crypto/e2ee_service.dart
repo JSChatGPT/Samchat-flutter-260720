@@ -38,6 +38,40 @@ class E2eeService {
     return Platform.isIOS ? 'ios' : 'android';
   }
 
+  /// True once this device already has an identity in secure storage — a
+  /// normal cold start of an existing install. False right after a fresh
+  /// install/reinstall/new phone, before [ensureDeviceRegistered] has run —
+  /// the one moment it's worth checking for a cloud backup to restore from
+  /// instead of silently generating a brand-new, unrelated identity (see
+  /// ChatBackupService).
+  Future<bool> hasLocalIdentity() async {
+    return await _storage.read(_privateKeyKey) != null;
+  }
+
+  /// This device's identity, ready to hand to [ChatBackupCrypto.encrypt] —
+  /// null if [ensureDeviceRegistered] hasn't run yet this session.
+  Future<({String deviceId, String privateKeyBase64})?> exportIdentityForBackup() async {
+    final deviceId = _deviceId ?? await _storage.read(_deviceIdKey);
+    final keyPair = _keyPair;
+    final privateKeyBase64 =
+        keyPair != null ? await E2eePrimitives.privateKeyToBase64(keyPair) : await _storage.read(_privateKeyKey);
+    if (deviceId == null || privateKeyBase64 == null) return null;
+    return (deviceId: deviceId, privateKeyBase64: privateKeyBase64);
+  }
+
+  /// Writes a recovered identity into secure storage — call before
+  /// [ensureDeviceRegistered] on a device with no local identity yet (see
+  /// [hasLocalIdentity]) when a cloud backup was found and successfully
+  /// decrypted. Restoring the *same* device_id/keypair means the backend's
+  /// existing chat_key_grants for this identity's public key work
+  /// immediately, with no waiting on the self-heal path at all.
+  Future<void> restoreIdentityFromBackup({required String deviceId, required String privateKeyBase64}) async {
+    await _storage.write(_privateKeyKey, privateKeyBase64);
+    await _storage.write(_deviceIdKey, deviceId);
+    _deviceId = deviceId;
+    _keyPair = await E2eePrimitives.keyPairFromPrivateKeyBase64(privateKeyBase64);
+  }
+
   /// Call once per app session (after login) — generates this device's
   /// identity/keypair on first run, or loads it from secure storage, then
   /// makes sure the backend has the current public key.
