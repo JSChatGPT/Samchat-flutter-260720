@@ -21,7 +21,7 @@ class EmailAccountsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Unlink account'),
-        content: Text('Stop syncing ${account.emailAddress}? Downloaded emails will be removed from SamChat.'),
+        content: Text('Stop syncing ${account.emailAddress}? Downloaded emails will be removed from Samchat.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unlink')),
@@ -53,7 +53,7 @@ class EmailAccountsScreen extends ConsumerWidget {
             ? EmptyStateWidget(
                 icon: Icons.mail_outline,
                 title: 'Link your email',
-                message: 'Connect a Gmail or Yahoo account to read and send email right from SamChat.',
+                message: 'Connect a Gmail or Yahoo account to read and send email right from Samchat.',
                 action: ElevatedButton(onPressed: () => _addAccount(context), child: const Text('Link an account')),
               )
             : RefreshIndicator(

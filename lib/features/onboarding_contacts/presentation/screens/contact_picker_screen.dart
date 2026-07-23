@@ -66,7 +66,7 @@ class _ContactPickerScreenState extends ConsumerState<ContactPickerScreen> {
     }
   }
 
-  static const _inviteMessage = "Hey! I'm using SamChat — download it so we can chat there.";
+  static const _inviteMessage = "Hey! I'm using Samchat — download it so we can chat there.";
 
   Future<void> _invite(DeviceContact contact) async {
     await showModalBottomSheet(
@@ -206,7 +206,7 @@ class _ContactPickerScreenState extends ConsumerState<ContactPickerScreen> {
       return EmptyStateWidget(
         icon: Icons.contacts_outlined,
         title: 'Contacts permission needed',
-        message: 'Allow contacts access so SamChat can show you who\'s already here.',
+        message: 'Allow contacts access so Samchat can show you who\'s already here.',
         action: ElevatedButton(
           onPressed: () => ref.read(contactsSyncNotifierProvider.notifier).syncFromDevice(),
           child: const Text('Grant access'),
@@ -222,8 +222,8 @@ class _ContactPickerScreenState extends ConsumerState<ContactPickerScreen> {
     if (syncState.status == ContactsSyncStatus.idle) {
       return EmptyStateWidget(
         icon: Icons.people_outline,
-        title: 'Find friends on SamChat',
-        message: 'Sync your phone contacts to see who\'s already using SamChat.',
+        title: 'Find friends on Samchat',
+        message: 'Sync your phone contacts to see who\'s already using Samchat.',
         action: ElevatedButton(
           onPressed: () => ref.read(contactsSyncNotifierProvider.notifier).syncFromDevice(),
           child: const Text('Sync contacts'),
@@ -275,7 +275,7 @@ class _ContactPickerScreenState extends ConsumerState<ContactPickerScreen> {
       rows.add(_ContactRow.onApp(contact));
     }
     if (invitable.isNotEmpty) {
-      rows.add(_ContactRow.section('Invite to SamChat', emphasized: true));
+      rows.add(_ContactRow.section('Invite to Samchat', emphasized: true));
       rows.addAll(invitable.map(_ContactRow.invite));
     }
 

@@ -82,7 +82,7 @@ class _HomeShellScreenState extends ConsumerState<HomeShellScreen> with SingleTi
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SamChat'),
+        title: const Text('Samchat'),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),

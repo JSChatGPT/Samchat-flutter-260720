@@ -167,7 +167,23 @@ class InboxNotifier extends StateNotifier<InboxState> {
       case RealtimeEventNames.userTyping:
         _onUserTyping(event);
         break;
+      case RealtimeEventNames.messagesRead:
+        _onMessagesRead(event);
+        break;
     }
+  }
+
+  /// Flips the inbox row's tick to "read" the moment the recipient reads a
+  /// chat, even while sitting on this tab rather than that specific chat —
+  /// mirrors the tick update ChatDetailNotifier already does for an open chat.
+  void _onMessagesRead(RealtimeEvent event) {
+    final ids = (event.data['message_ids'] as List? ?? []).map((e) => e.toString()).toSet();
+    if (ids.isEmpty) return;
+    final idx = state.chats.indexWhere((c) => c.lastMessage != null && ids.contains(c.lastMessage!.id));
+    if (idx == -1) return;
+    final list = [...state.chats];
+    list[idx] = list[idx].copyWith(lastMessage: list[idx].lastMessage!.copyWith(isReadByRecipient: true));
+    state = state.copyWith(chats: list);
   }
 
   Future<void> _onMessageSent(RealtimeEvent event) async {

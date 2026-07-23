@@ -162,7 +162,7 @@ class _SamChatAppState extends ConsumerState<SamChatApp> with WidgetsBindingObse
     });
 
     return MaterialApp.router(
-      title: 'SamChat',
+      title: 'Samchat',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

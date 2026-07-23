@@ -54,6 +54,13 @@ Future<void> fcmBackgroundHandler(RemoteMessage message) async {
       body: body,
       payload: 'message:${data['chat_id']}',
     );
+  } else if (type == 'reaction') {
+    await notifications.showMessageNotification(
+      id: data['message_id']?.hashCode ?? 0,
+      title: data['title']?.toString() ?? 'New reaction',
+      body: data['body']?.toString() ?? '',
+      payload: 'message:${data['chat_id']}',
+    );
   } else if (type == 'new_email') {
     final accountId = data['email_account_id']?.toString();
     final emailId = data['email_id']?.toString();

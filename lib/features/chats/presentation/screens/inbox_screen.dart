@@ -133,6 +133,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                 context.pushNamed(RouteNames.createGroup);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.event_available_outlined),
+              title: const Text('New meeting'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.pushNamed(RouteNames.scheduleMeeting);
+              },
+            ),
           ],
         ),
       ),

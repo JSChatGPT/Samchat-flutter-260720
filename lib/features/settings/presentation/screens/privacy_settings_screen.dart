@@ -7,7 +7,7 @@ import '../../application/app_lock_notifier.dart';
 import '../../application/privacy_notifier.dart';
 
 const _options = {
-  'everyone': ('Everyone', 'All SamChat users can see your status'),
+  'everyone': ('Everyone', 'All Samchat users can see your status'),
   'contacts': ('My contacts', 'Only people you\'ve saved can see your status'),
   'selected': ('Selected contacts', 'Only contacts you choose'),
   'exclude': ('My contacts except…', 'Your contacts, except people you choose'),

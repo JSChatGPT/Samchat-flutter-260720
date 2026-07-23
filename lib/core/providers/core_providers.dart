@@ -60,6 +60,7 @@ final pushServiceProvider = Provider<PushService>((ref) {
   final service = PushService(
     dio: ref.watch(dioProvider),
     notifications: ref.watch(localNotificationsServiceProvider),
+    prefs: ref.watch(localPrefsServiceProvider),
   );
   ref.onDispose(service.dispose);
   return service;

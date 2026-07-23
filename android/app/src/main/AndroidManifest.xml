@@ -13,6 +13,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <!-- Lets the app prompt the user to exempt it from Doze/App Standby
+         battery optimization (see PushService._requestBatteryOptimizationExemption
+         in push_service.dart) — without this, Android can defer even
+         high-priority FCM delivery (messages, reactions, incoming calls)
+         while the device is idle, which is what made push only seem to
+         work right after the app had been opened once. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Self-managed ConnectionService (see android/.../calls/) — registers
          SamChat as a real calling app with Android's Telecom framework, the
          same mechanism WhatsApp/Messenger use so an incoming call rings and
@@ -51,7 +58,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <application
-        android:label="SamChat"
+        android:label="Samchat"
         android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

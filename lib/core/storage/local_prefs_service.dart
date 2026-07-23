@@ -16,6 +16,7 @@ class LocalPrefsService {
   static const _lastTabKey = 'last_tab_index';
   static const _appLockEnabledKey = 'app_lock_enabled';
   static const _appLockTimeoutKey = 'app_lock_timeout';
+  static const _batteryOptPromptedKey = 'battery_opt_prompted';
 
   String? get themeMode => _prefs.getString(_themeModeKey);
   Future<void> setThemeMode(String mode) => _prefs.setString(_themeModeKey, mode);
@@ -31,6 +32,11 @@ class LocalPrefsService {
 
   bool get contactsSynced => _prefs.getBool(_contactsSyncedKey) ?? false;
   Future<void> setContactsSynced(bool v) => _prefs.setBool(_contactsSyncedKey, v);
+
+  // Device-level, not cleared on logout — the one-time battery-optimization
+  // exemption prompt (see PushService) shouldn't reappear on every re-login.
+  bool get batteryOptimizationPrompted => _prefs.getBool(_batteryOptPromptedKey) ?? false;
+  Future<void> setBatteryOptimizationPrompted(bool v) => _prefs.setBool(_batteryOptPromptedKey, v);
 
   int get lastTabIndex => _prefs.getInt(_lastTabKey) ?? 0;
   Future<void> setLastTabIndex(int v) => _prefs.setInt(_lastTabKey, v);

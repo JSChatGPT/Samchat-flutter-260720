@@ -26,7 +26,7 @@ class SplashScreen extends StatelessWidget {
                 height: 120,
               ),
               const SizedBox(height: 20),
-              Text('SamChat', style: Theme.of(context).textTheme.headlineSmall),
+              Text('Samchat', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 24),
               SizedBox(
                 width: 28,

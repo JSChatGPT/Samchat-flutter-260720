@@ -50,7 +50,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('No account found'),
         content: Text(
-          '$phone isn\'t registered on SamChat yet. Create an account?',
+          '$phone isn\'t registered on Samchat yet. Create an account?',
         ),
         actions: [
           TextButton(
@@ -102,7 +102,7 @@ class _PhoneEntryScreenState extends ConsumerState<PhoneEntryScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Welcome to SamChat',
+                    'Welcome to Samchat',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),

@@ -85,7 +85,7 @@ class SmsInboxScreen extends ConsumerWidget {
         return EmptyStateWidget(
           icon: Icons.sms_outlined,
           title: 'Read & reply to texts here',
-          message: 'Make SamChat your default SMS app to see and send text messages in this tab. '
+          message: 'Make Samchat your default SMS app to see and send text messages in this tab. '
               'This replaces your phone\'s current default messaging app.',
           action: ElevatedButton(
             onPressed: () => ref.read(smsInboxNotifierProvider.notifier).requestDefault(),

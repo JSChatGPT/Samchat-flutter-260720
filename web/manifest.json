@@ -1,11 +1,11 @@
 {
-    "name": "SamChat",
-    "short_name": "SamChat",
+    "name": "Samchat",
+    "short_name": "Samchat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#FF6A1A",
-    "description": "SamChat — a modern WhatsApp-style chat app.",
+    "description": "Samchat — a modern WhatsApp-style chat app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

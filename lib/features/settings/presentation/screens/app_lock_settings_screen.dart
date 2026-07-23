@@ -41,7 +41,7 @@ class AppLockSettingsScreen extends ConsumerWidget {
         children: [
           SwitchListTile(
             title: const Text('Unlock with fingerprint'),
-            subtitle: const Text('Require your fingerprint to open SamChat'),
+            subtitle: const Text('Require your fingerprint to open Samchat'),
             value: settings.enabled,
             onChanged: (value) => _onToggle(context, ref, value),
           ),

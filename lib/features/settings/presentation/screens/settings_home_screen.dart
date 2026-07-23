@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/providers/core_providers.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
@@ -22,6 +25,20 @@ class SettingsHomeScreen extends ConsumerWidget {
     if (confirmed) {
       await ref.read(authNotifierProvider.notifier).logout();
     }
+  }
+
+  Future<void> _requestBatteryExemption(BuildContext context, WidgetRef ref) async {
+    final granted = await ref.read(pushServiceProvider).requestBatteryOptimizationExemption();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          granted
+              ? 'Background access allowed — notifications and calls will arrive reliably.'
+              : 'Not allowed. You can also enable this from your phone\'s battery settings for Samchat.',
+        ),
+      ),
+    );
   }
 
   void _showThemePicker(BuildContext context, WidgetRef ref) {
@@ -63,7 +80,7 @@ class SettingsHomeScreen extends ConsumerWidget {
           ListTile(
             leading: AppAvatar(photoUrl: me?.photoUrl, initials: me?.initials ?? '?', size: 56),
             title: Text(me?.displayName ?? '', style: Theme.of(context).textTheme.titleMedium),
-            subtitle: Text(me?.aboutStatus ?? 'Hey there! I am using SamChat.'),
+            subtitle: Text(me?.aboutStatus ?? 'Hey there! I am using Samchat.'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.pushNamed(RouteNames.profileEdit),
           ),
@@ -84,6 +101,13 @@ class SettingsHomeScreen extends ConsumerWidget {
             title: const Text('Theme'),
             onTap: () => _showThemePicker(context, ref),
           ),
+          if (Platform.isAndroid)
+            ListTile(
+              leading: const Icon(Icons.battery_charging_full_outlined),
+              title: const Text('Background notifications'),
+              subtitle: const Text('Allow Samchat to run in the background for reliable notifications and calls'),
+              onTap: () => _requestBatteryExemption(context, ref),
+            ),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About'),

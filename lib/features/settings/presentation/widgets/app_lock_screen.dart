@@ -29,7 +29,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     if (_authenticating) return;
     setState(() => _authenticating = true);
     final ok = await ref.read(biometricAuthServiceProvider).authenticate(
-          reason: 'Unlock SamChat',
+          reason: 'Unlock Samchat',
         );
     if (!mounted) return;
     setState(() => _authenticating = false);
@@ -52,7 +52,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               children: [
                 Image.asset('assets/images/samchat_logo.png', width: 96, height: 96),
                 const SizedBox(height: 24),
-                Text('SamChat is locked', style: Theme.of(context).textTheme.titleLarge),
+                Text('Samchat is locked', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
                 Text(
                   'Unlock with your fingerprint to continue',

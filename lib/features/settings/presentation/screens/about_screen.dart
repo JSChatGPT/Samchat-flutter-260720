@@ -6,14 +6,14 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('About SamChat')),
+      appBar: AppBar(title: const Text('About Samchat')),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset('assets/images/samchat_logo.png', width: 88, height: 88),
             const SizedBox(height: 16),
-            Text('SamChat', style: Theme.of(context).textTheme.titleLarge),
+            Text('Samchat', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text('Version 1.0.0', style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),

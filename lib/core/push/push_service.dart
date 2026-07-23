@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../api/endpoints.dart';
+import '../storage/local_prefs_service.dart';
 import 'fcm_background_handler.dart';
 import 'local_notifications_service.dart';
 import 'notification_actions.dart';
@@ -27,12 +29,14 @@ class PushNavigationTarget {
 /// silently no-ops — same "no crash, just no push" behavior the backend
 /// itself documents for a missing `FIREBASE_CREDENTIALS`.
 class PushService {
-  PushService({required Dio dio, required LocalNotificationsService notifications})
+  PushService({required Dio dio, required LocalNotificationsService notifications, required LocalPrefsService prefs})
       : _dio = dio,
-        _notifications = notifications;
+        _notifications = notifications,
+        _prefs = prefs;
 
   final Dio _dio;
   final LocalNotificationsService _notifications;
+  final LocalPrefsService _prefs;
   bool _ready = false;
   String? _lastToken;
 
@@ -75,7 +79,44 @@ class PushService {
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) _onMessageOpenedApp(initialMessage);
 
+    _maybeRequestBatteryOptimizationExemption();
+
     _ready = true;
+  }
+
+  /// Android's Doze/App Standby can defer even a high-priority FCM message
+  /// while the device has been idle for a while, unless the app is
+  /// exempted from battery optimization — without this, push (and
+  /// especially incoming calls) can arrive late or not until something
+  /// else wakes the app up. One-time only (see LocalPrefsService) so it
+  /// doesn't re-prompt on every login; [requestBatteryOptimizationExemption]
+  /// below is the same call exposed for a manual "retry" entry in Settings,
+  /// for anyone who dismissed it the first time.
+  Future<void> _maybeRequestBatteryOptimizationExemption() async {
+    if (!Platform.isAndroid || _prefs.batteryOptimizationPrompted) return;
+    await _prefs.setBatteryOptimizationPrompted(true);
+    await requestBatteryOptimizationExemption();
+  }
+
+  Future<bool> requestBatteryOptimizationExemption() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (status.isGranted) return true;
+      final result = await Permission.ignoreBatteryOptimizations.request();
+      return result.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> get isExemptFromBatteryOptimization async {
+    if (!Platform.isAndroid) return true;
+    try {
+      return await Permission.ignoreBatteryOptimizations.status.then((s) => s.isGranted);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _registerToken(String token) async {
