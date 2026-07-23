@@ -46,6 +46,17 @@ class ChatListTile extends StatelessWidget {
 
     final previewIcon = lastMessage != null ? getPreviewIcon(lastMessage.previewText) : null;
 
+    // WhatsApp-style "Sender: message" prefix so a group's last message is
+    // legible at a glance without opening it — own messages skip the
+    // prefix (the tick icon already marks them as "sent by me").
+    String previewText = isTyping ? 'typing…' : (lastMessage?.previewText ?? 'No messages yet');
+    if (!isTyping && chat.isGroup && lastMessage != null && lastMessage.senderId != myUserId) {
+      final senderName = lastMessage.sender?.displayName.split(' ').first;
+      if (senderName != null && senderName.isNotEmpty) {
+        previewText = '$senderName: $previewText';
+      }
+    }
+
     return Slidable(
       key: ValueKey(chat.id),
       endActionPane: ActionPane(
@@ -75,6 +86,7 @@ class ChatListTile extends StatelessWidget {
           initials: chat.isGroup ? title.substring(0, 1).toUpperCase() : (other?.user.initials ?? '?'),
           showOnlineDot: !chat.isGroup,
           isOnline: isOnline,
+          isGroup: chat.isGroup,
         ),
         title: Text(
           title,
@@ -98,7 +110,7 @@ class ChatListTile extends StatelessWidget {
             ],
             Expanded(
               child: Text(
-                isTyping ? 'typing…' : (lastMessage?.previewText ?? 'No messages yet'),
+                previewText,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: textTheme.bodySmall?.copyWith(

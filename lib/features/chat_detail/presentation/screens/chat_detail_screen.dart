@@ -8,6 +8,7 @@ import '../../../../core/providers/core_providers.dart';
 import '../../../../core/push/push_service.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/emoji_picker_theme.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
@@ -111,14 +112,16 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   static const _quickReactEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   Future<void> _openFullEmojiReactionPicker(ChatMessage message) async {
+    final scheme = Theme.of(context).colorScheme;
     final emoji = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
+      backgroundColor: scheme.surface,
       builder: (ctx) => SizedBox(
         height: 320,
         child: EmojiPicker(
           onEmojiSelected: (category, e) => Navigator.pop(ctx, e.emoji),
-          config: const Config(height: 300),
+          config: emojiPickerConfig(scheme, height: 300),
         ),
       ),
     );

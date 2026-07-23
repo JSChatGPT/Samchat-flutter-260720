@@ -11,6 +11,7 @@ class AppAvatar extends StatelessWidget {
     this.size = 48,
     this.showOnlineDot = false,
     this.isOnline = false,
+    this.isGroup = false,
     this.heroTag,
   });
 
@@ -19,6 +20,11 @@ class AppAvatar extends StatelessWidget {
   final double size;
   final bool showOnlineDot;
   final bool isOnline;
+
+  /// Small badge in the same corner slot as the online dot — the two never
+  /// apply to the same chat (a chat is either a group or has a single other
+  /// participant to show online status for), so they share one slot.
+  final bool isGroup;
   final Object? heroTag;
 
   @override
@@ -43,13 +49,13 @@ class AppAvatar extends StatelessWidget {
       avatar = Hero(tag: heroTag!, child: avatar);
     }
 
-    if (!showOnlineDot) return avatar;
+    if (!showOnlineDot && !isGroup) return avatar;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         avatar,
-        if (isOnline)
+        if (showOnlineDot && isOnline)
           Positioned(
             bottom: 0,
             right: 0,
@@ -61,6 +67,21 @@ class AppAvatar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: scheme.surface, width: 2),
               ),
+            ),
+          ),
+        if (isGroup)
+          Positioned(
+            bottom: -1,
+            right: -1,
+            child: Container(
+              width: size * 0.36,
+              height: size * 0.36,
+              decoration: BoxDecoration(
+                color: scheme.secondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: scheme.surface, width: 1.5),
+              ),
+              child: Icon(Icons.groups_rounded, size: size * 0.22, color: scheme.onSecondary),
             ),
           ),
       ],

@@ -155,6 +155,21 @@ class _ContactPickerScreenState extends ConsumerState<ContactPickerScreen> {
               ? '${_selectedUserIds.length} selected'
               : widget.title,
         ),
+        actions: [
+          IconButton(
+            icon: syncState.status == ContactsSyncStatus.syncing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh contacts',
+            onPressed: syncState.status == ContactsSyncStatus.syncing
+                ? null
+                : () => ref.read(contactsSyncNotifierProvider.notifier).syncFromDevice(),
+          ),
+        ],
       ),
       floatingActionButton: widget.multiSelect && _selectedUserIds.isNotEmpty
           ? FloatingActionButton.extended(

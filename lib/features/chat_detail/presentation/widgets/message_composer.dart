@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/theme/emoji_picker_theme.dart';
+
 /// Curated "sticker" tray — no sticker art pipeline exists, so this ships as
 /// large single emoji sent instantly (mirrors WhatsApp's own oversized-emoji
 /// rendering for a lone-emoji message). Kept identical to the picker used by
@@ -162,12 +164,16 @@ class _MessageComposerState extends State<MessageComposer> with SingleTickerProv
   }
 
   Widget _buildPicker(ColorScheme scheme) {
-    return SizedBox(
+    return Container(
       height: 280,
+      color: scheme.surface,
       child: Column(
         children: [
           TabBar(
             controller: _pickerTabController,
+            labelColor: scheme.primary,
+            unselectedLabelColor: scheme.onSurfaceVariant,
+            indicatorColor: scheme.primary,
             tabs: const [
               Tab(icon: Icon(Icons.emoji_emotions_outlined), text: 'Emoji'),
               Tab(icon: Icon(Icons.auto_awesome_outlined), text: 'Stickers'),
@@ -181,7 +187,7 @@ class _MessageComposerState extends State<MessageComposer> with SingleTickerProv
                   textEditingController: _controller,
                   onEmojiSelected: (category, emoji) =>
                       setState(() => _hasText = _controller.text.trim().isNotEmpty),
-                  config: const Config(height: 230),
+                  config: emojiPickerConfig(scheme, height: 230),
                 ),
                 _buildStickerGrid(scheme),
               ],
@@ -194,15 +200,23 @@ class _MessageComposerState extends State<MessageComposer> with SingleTickerProv
 
   Widget _buildStickerGrid(ColorScheme scheme) {
     return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6),
+      padding: const EdgeInsets.all(10),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 6,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+      ),
       itemCount: kStickerEmojis.length,
       itemBuilder: (context, index) {
         final emoji = kStickerEmojis[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => _sendSticker(emoji),
-          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 30))),
+        return Material(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _sendSticker(emoji),
+            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 28))),
+          ),
         );
       },
     );
