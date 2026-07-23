@@ -10,18 +10,24 @@ class QuotedMessageWidget extends StatelessWidget {
     required this.message,
     this.senderLabel,
     this.onClose,
+    this.onTap,
     this.dense = false,
   });
 
   final ChatMessage message;
   final String? senderLabel;
   final VoidCallback? onClose;
+
+  /// Set only for the inline preview inside a bubble (never the composer's
+  /// reply-preview above it) — jumps to and briefly highlights the original
+  /// message, WhatsApp-style. See ChatDetailScreen._scrollToMessage.
+  final VoidCallback? onTap;
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
@@ -57,6 +63,12 @@ class QuotedMessageWidget extends StatelessWidget {
             ),
         ],
       ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(borderRadius: BorderRadius.circular(10), onTap: onTap, child: content),
     );
   }
 }

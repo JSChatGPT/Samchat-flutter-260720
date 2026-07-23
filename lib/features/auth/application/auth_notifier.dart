@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/session_controller.dart';
+import '../../../core/cache/chat_cache_service.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/push/push_service.dart';
 import '../../../core/realtime/pusher_service.dart';
@@ -34,6 +35,7 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref
     session: ref.watch(sessionControllerProvider),
     pusher: ref.watch(pusherServiceProvider),
     push: ref.watch(pushServiceProvider),
+    cache: ref.watch(chatCacheServiceProvider),
   );
 });
 
@@ -45,6 +47,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required this.session,
     required this.pusher,
     required this.push,
+    required this.cache,
   }) : super(const AuthState()) {
     session.onUnauthorized.listen((_) => _forceLogout());
     _restoreSession();
@@ -56,6 +59,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final SessionController session;
   final PusherService pusher;
   final PushService push;
+  final ChatCacheService cache;
 
   Future<void> _restoreSession() async {
     final token = await storage.readToken();
@@ -132,6 +136,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     pusher.disconnect();
     await storage.clear();
     await prefs.clear();
+    // A different account signing into the same device must never see the
+    // previous account's cached chats/messages.
+    await cache.clearAll();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }

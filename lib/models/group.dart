@@ -25,4 +25,13 @@ class ChatGroup {
       createdBy: asStringOrNull(json['created_by'] ?? json['created_by_user_id']),
     );
   }
+
+  /// Mirrors [fromJson] — see AppUser.toJson for why.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'group_name': groupName,
+        'group_image_url': groupImageUrl,
+        'only_admins_can_post': onlyAdminsCanPost,
+        'created_by': createdBy,
+      };
 }

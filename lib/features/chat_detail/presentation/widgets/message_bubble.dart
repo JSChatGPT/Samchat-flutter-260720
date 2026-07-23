@@ -19,6 +19,8 @@ class MessageBubble extends StatelessWidget {
     this.senderName,
     this.onRetry,
     this.onLongPress,
+    this.onQuotedMessageTap,
+    this.isHighlighted = false,
   });
 
   final ChatMessage message;
@@ -27,6 +29,16 @@ class MessageBubble extends StatelessWidget {
   final String? senderName;
   final VoidCallback? onRetry;
   final VoidCallback? onLongPress;
+
+  /// Tapping the inline quoted-reply preview jumps to and highlights the
+  /// original message — see ChatDetailScreen._scrollToMessage. Receives the
+  /// quoted message's id.
+  final void Function(String messageId)? onQuotedMessageTap;
+
+  /// True for a brief moment right after scrolling here via a reply tap —
+  /// mirrors WhatsApp's flash-highlight so the jump is legible, not just an
+  /// unexplained scroll.
+  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +92,8 @@ class MessageBubble extends StatelessWidget {
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onLongPress: onLongPress,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
           margin: EdgeInsets.only(left: isMine ? 64 : 12, right: isMine ? 12 : 64, top: 2, bottom: 2),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
@@ -94,6 +107,10 @@ class MessageBubble extends StatelessWidget {
                 : null,
             color: isMine ? null : scheme.surfaceContainerLow,
             borderRadius: radius,
+            border: Border.all(
+              color: isHighlighted ? scheme.primary : Colors.transparent,
+              width: 2.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.05),
@@ -120,6 +137,9 @@ class MessageBubble extends StatelessWidget {
                   senderLabel: message.quotedMessage!.isMine(myUserId)
                       ? 'You'
                       : message.quotedMessage!.sender?.displayName,
+                  onTap: onQuotedMessageTap != null
+                      ? () => onQuotedMessageTap!(message.quotedMessage!.id)
+                      : null,
                 ),
                 const SizedBox(height: 6),
               ],

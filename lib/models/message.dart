@@ -64,6 +64,9 @@ class MessageReaction {
       emoji: asString(json['emoji']),
     );
   }
+
+  /// Mirrors [fromJson] — see AppUser.toJson for why.
+  Map<String, dynamic> toJson() => {'user_id': userId, 'emoji': emoji};
 }
 
 /// Local-only send lifecycle for optimistic UI — the server itself only has
@@ -161,6 +164,30 @@ class ChatMessage {
     );
   }
 
+  /// Mirrors [fromJson] — see AppUser.toJson for why. Note: [content] here
+  /// is always the final, already-decrypted (or placeholder) text exactly
+  /// as displayed — decryption happens once, at the repository boundary,
+  /// well before a ChatMessage ever reaches ChatCacheService. Reading a
+  /// cached message back through [fromJson] must never be run through the
+  /// decrypt step again.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'chat_id': chatId,
+        'sender_id': senderId,
+        'sender': sender?.toJson(),
+        'message_type': messageTypeToString(messageType),
+        'content': content,
+        'media_url': mediaUrl,
+        'file_name': fileName,
+        'mime_type': mimeType,
+        'metadata': metadata,
+        'quoted_message_id': quotedMessageId,
+        'quoted_message': quotedMessage?.toJson(),
+        'created_at': createdAt.toIso8601String(),
+        'is_read': isReadByRecipient,
+        'reactions': reactions.map((r) => r.toJson()).toList(),
+      };
+
   ChatMessage copyWith({
     SendStatus? sendStatus,
     String? id,
@@ -168,6 +195,7 @@ class ChatMessage {
     bool? deletedForMe,
     String? content,
     List<MessageReaction>? reactions,
+    ChatMessage? quotedMessage,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -181,7 +209,7 @@ class ChatMessage {
       mimeType: mimeType,
       metadata: metadata,
       quotedMessageId: quotedMessageId,
-      quotedMessage: quotedMessage,
+      quotedMessage: quotedMessage ?? this.quotedMessage,
       createdAt: createdAt,
       isReadByRecipient: isReadByRecipient ?? this.isReadByRecipient,
       sendStatus: sendStatus ?? this.sendStatus,

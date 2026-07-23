@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/cache/chat_cache_service.dart';
 import '../../../core/crypto/e2ee_service.dart';
 import '../../../core/crypto/message_decryptor.dart';
 import '../../../core/providers/core_providers.dart';
@@ -81,23 +82,47 @@ final inboxNotifierProvider = StateNotifierProvider<InboxNotifier, InboxState>((
     pusher: ref.watch(pusherServiceProvider),
     myUserId: ref.watch(currentUserIdProvider),
     e2ee: ref.watch(e2eeServiceProvider),
+    cache: ref.watch(chatCacheServiceProvider),
   );
   ref.onDispose(notifier.disposeSubscription);
   return notifier;
 });
 
 class InboxNotifier extends StateNotifier<InboxState> {
-  InboxNotifier({required this.repository, required this.pusher, required this.myUserId, required this.e2ee})
-      : super(const InboxState()) {
+  InboxNotifier({
+    required this.repository,
+    required this.pusher,
+    required this.myUserId,
+    required this.e2ee,
+    required this.cache,
+  }) : super(const InboxState()) {
     _sub = pusher.events.listen(_onRealtimeEvent);
-    refresh();
+    _loadFromCacheThenRefresh();
   }
 
   final ChatsRepository repository;
   final PusherService pusher;
   final String myUserId;
   final E2eeService e2ee;
+  final ChatCacheService cache;
   StreamSubscription? _sub;
+
+  /// Paints the last-known chat list instantly from the local cache (no
+  /// network round trip) before ever attempting [refresh] — the only thing
+  /// that makes a cold app start while offline show anything at all,
+  /// since a fresh notifier otherwise starts from an empty list with
+  /// nothing to fall back to when the network call that follows fails.
+  Future<void> _loadFromCacheThenRefresh() async {
+    try {
+      final cached = await cache.getCachedChats();
+      if (cached.isNotEmpty && mounted) {
+        state = state.copyWith(status: InboxLoadStatus.loaded, chats: _sorted(cached));
+      }
+    } catch (_) {
+      // Best-effort — refresh() below is still the source of truth.
+    }
+    await refresh();
+  }
 
   Future<void> refresh() async {
     state = state.copyWith(status: InboxLoadStatus.loading);
@@ -109,7 +134,12 @@ class InboxNotifier extends StateNotifier<InboxState> {
         blockedUserIds: result.blockedUserIds,
       );
       _healAllChats(result.chats);
+      unawaited(cache.cacheChats(result.chats));
     } on ApiException catch (e) {
+      // Deliberately does not touch `chats` — copyWith keeps whatever's
+      // already in state (cache-loaded or from a previous successful
+      // refresh) instead of blanking the list out from under the user just
+      // because this one refresh failed (e.g. no connectivity).
       state = state.copyWith(status: InboxLoadStatus.error, error: e.message);
     }
   }
@@ -158,6 +188,7 @@ class InboxNotifier extends StateNotifier<InboxState> {
   Future<void> deleteChat(String chatId) async {
     await repository.deleteChat(chatId);
     state = state.copyWith(chats: state.chats.where((c) => c.id != chatId).toList());
+    unawaited(cache.deleteChat(chatId));
   }
 
   List<Chat> _sorted(List<Chat> chats) {
@@ -225,6 +256,7 @@ class InboxNotifier extends StateNotifier<InboxState> {
     final list = [...state.chats]..removeAt(idx);
     list.insert(0, updated);
     state = state.copyWith(chats: list);
+    unawaited(cache.cacheChats([updated]));
   }
 
   void _onUserTyping(RealtimeEvent event) {

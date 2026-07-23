@@ -12,8 +12,22 @@ import 'e2ee_service.dart';
 /// Never surfaces raw ciphertext in the UI — whether there's no key yet (key
 /// distribution still in flight) or decryption outright failed, shows a
 /// clear placeholder instead of base64 gibberish that reads as a broken app.
+///
+/// Recurses into [ChatMessage.quotedMessage] — a reply's quoted snippet is a
+/// full nested ChatMessage with its own (possibly still-encrypted) content,
+/// and was previously never decrypted here at all, so QuotedMessageWidget
+/// rendered raw base64 ciphertext for any reply to an encrypted message
+/// instead of the actual quoted text.
 Future<ChatMessage> decryptChatMessage(E2eeService e2ee, ChatMessage message) async {
-  if (message.metadata['encrypted'] != true || message.content == null) return message;
+  final quoted = message.quotedMessage;
+  final decryptedQuoted = quoted != null ? await decryptChatMessage(e2ee, quoted) : null;
+
+  if (message.metadata['encrypted'] != true || message.content == null) {
+    return decryptedQuoted != null ? message.copyWith(quotedMessage: decryptedQuoted) : message;
+  }
   final decrypted = await e2ee.tryDecrypt(message.chatId, message.content!);
-  return message.copyWith(content: decrypted ?? '🔒 Unable to decrypt this message');
+  return message.copyWith(
+    content: decrypted ?? '🔒 Unable to decrypt this message',
+    quotedMessage: decryptedQuoted,
+  );
 }

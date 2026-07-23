@@ -20,4 +20,11 @@ class ChatParticipant {
       isAdmin: asBool(json['is_admin']),
     );
   }
+
+  /// Mirrors [fromJson] — see AppUser.toJson for why.
+  Map<String, dynamic> toJson() => {
+        'user_id': userId,
+        'user': user.toJson(),
+        'is_admin': isAdmin,
+      };
 }

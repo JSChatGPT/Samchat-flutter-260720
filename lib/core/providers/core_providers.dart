@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../api/session_controller.dart';
+import '../cache/chat_cache_service.dart';
 import '../crypto/e2ee_repository.dart';
 import '../crypto/e2ee_service.dart';
 import '../native/app_intent_channel.dart';
@@ -20,6 +21,12 @@ import 'heartbeat_service.dart';
 /// other provider can just `ref.watch` it synchronously.
 final localPrefsServiceProvider = Provider<LocalPrefsService>((ref) {
   throw UnimplementedError('localPrefsServiceProvider must be overridden in main()');
+});
+
+/// [ChatCacheService] needs async init (sqflite's `openDatabase`) — same
+/// pattern as [localPrefsServiceProvider] above.
+final chatCacheServiceProvider = Provider<ChatCacheService>((ref) {
+  throw UnimplementedError('chatCacheServiceProvider must be overridden in main()');
 });
 
 final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {

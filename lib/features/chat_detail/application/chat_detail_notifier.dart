@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/api/api_exception.dart';
+import '../../../core/cache/chat_cache_service.dart';
 import '../../../core/crypto/e2ee_service.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/realtime/pusher_service.dart';
@@ -73,6 +74,7 @@ final chatDetailNotifierProvider = StateNotifierProvider.autoDispose
     pusher: ref.watch(pusherServiceProvider),
     myUserId: ref.watch(currentUserIdProvider),
     e2ee: ref.watch(e2eeServiceProvider),
+    cache: ref.watch(chatCacheServiceProvider),
   );
   ref.onDispose(notifier.disposeSubscription);
   return notifier;
@@ -85,6 +87,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
     required this.pusher,
     required this.myUserId,
     required this.e2ee,
+    required this.cache,
   }) : super(const ChatDetailState()) {
     pusher.subscribe(RealtimeChannels.chat(chatId));
     _sub = pusher.events.listen(_onRealtimeEvent);
@@ -96,11 +99,31 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
   final PusherService pusher;
   final String myUserId;
   final E2eeService e2ee;
+  final ChatCacheService cache;
   StreamSubscription? _sub;
   Timer? _typingStopTimer;
   bool _iAmTyping = false;
 
   Future<void> _loadInitial() async {
+    // Paints instantly from the local cache (no network round trip) before
+    // ever attempting the real fetch below — the only thing that makes
+    // reopening a chat while offline show its already-seen history instead
+    // of a blank/error screen.
+    try {
+      final cachedChat = await cache.getCachedChat(chatId);
+      final cachedMessages = await cache.getCachedMessages(chatId);
+      if (mounted && cachedMessages.isNotEmpty) {
+        state = state.copyWith(
+          chat: cachedChat,
+          messages: [...cachedMessages.reversed],
+          isLoadingInitial: false,
+          hasMoreOlder: true,
+        );
+      }
+    } catch (_) {
+      // Best-effort — the network fetch below is still the source of truth.
+    }
+
     try {
       final result = await repository.getChatDetail(chatId, page: 1);
       // autoDispose: backing out of this chat while the initial load is
@@ -124,9 +147,17 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
       // happens to be online at that exact moment. No-op if this device
       // doesn't hold the chat's key itself.
       unawaited(e2ee.healMissingGrants(chatId).catchError((_) {}));
+      unawaited(cache.cacheMessages(chatId, result.messages.items));
     } on ApiException catch (e) {
       if (!mounted) return;
-      state = state.copyWith(isLoadingInitial: false, error: e.message);
+      // Only surface the error state if there's genuinely nothing to show
+      // (isLoadingInitial is already false above if the cache branch
+      // painted something) — otherwise silently keep the cached view
+      // rather than replacing it with an error banner just because this
+      // one network attempt failed (e.g. no connectivity).
+      if (state.messages.isEmpty) {
+        state = state.copyWith(isLoadingInitial: false, error: e.message);
+      }
     }
   }
 
@@ -143,9 +174,29 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
         hasMoreOlder: result.messages.hasMore,
         currentPage: result.messages.currentPage,
       );
+      unawaited(cache.cacheMessages(chatId, result.messages.items));
     } on ApiException {
       if (!mounted) return;
-      state = state.copyWith(isLoadingMore: false);
+      // Offline fallback: page further back through whatever's already
+      // cached from a previous session rather than just giving up —
+      // matches the "already loaded messages stay viewable" goal for
+      // scroll-up pagination too, not just the first page.
+      final oldestLoadedMillis =
+          state.messages.isNotEmpty ? state.messages.first.createdAt.millisecondsSinceEpoch : null;
+      try {
+        final olderCached = oldestLoadedMillis != null
+            ? await cache.getCachedMessages(chatId, beforeMillis: oldestLoadedMillis)
+            : const <ChatMessage>[];
+        if (!mounted) return;
+        state = state.copyWith(
+          messages: [...olderCached.reversed, ...state.messages],
+          isLoadingMore: false,
+          hasMoreOlder: olderCached.isNotEmpty,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        state = state.copyWith(isLoadingMore: false);
+      }
     }
   }
 
@@ -178,7 +229,9 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
         metadata: metadata,
         quotedMessageId: quotedMessageId,
       );
-      _replaceMessage(tempId, sent.copyWith(sendStatus: SendStatus.sent));
+      final replacement = sent.copyWith(sendStatus: SendStatus.sent);
+      _replaceMessage(tempId, replacement);
+      unawaited(cache.cacheMessage(replacement));
     } catch (_) {
       _replaceMessage(tempId, optimistic.copyWith(sendStatus: SendStatus.failed));
     }
@@ -206,17 +259,21 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
 
   void _updateMessageReactions(String messageId, List<MessageReaction> reactions) {
     if (!mounted) return;
-    state = state.copyWith(
-      messages: state.messages
-          .map((m) => m.id == messageId ? m.copyWith(reactions: reactions) : m)
-          .toList(),
-    );
+    ChatMessage? updatedMessage;
+    final messages = state.messages.map((m) {
+      if (m.id != messageId) return m;
+      updatedMessage = m.copyWith(reactions: reactions);
+      return updatedMessage!;
+    }).toList();
+    state = state.copyWith(messages: messages);
+    if (updatedMessage != null) unawaited(cache.cacheMessage(updatedMessage!));
   }
 
   Future<void> deleteMessage(ChatMessage message, {required bool forEveryone}) async {
     try {
       await repository.deleteMessage(message.id, forEveryone: forEveryone);
       _removeMessage(message.id);
+      unawaited(cache.deleteMessage(message.id));
     } on ApiException {
       // Leave the message in place if the delete request failed.
     }
@@ -227,6 +284,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
       await repository.clearChat(chatId);
       if (!mounted) return;
       state = state.copyWith(messages: const []);
+      unawaited(cache.clearMessagesForChat(chatId));
     } on ApiException {
       // No-op — surfacing a toast is the screen's responsibility if desired.
     }
@@ -308,6 +366,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
           final updated = [...state.messages];
           updated[existingIndex] = message;
           state = state.copyWith(messages: updated);
+          unawaited(cache.cacheMessage(message));
           return;
         }
         // A brand-new message. The sender's own bubble already came from the
@@ -316,6 +375,7 @@ class ChatDetailNotifier extends StateNotifier<ChatDetailState> {
         if (message.senderId == myUserId) return;
         state = state.copyWith(messages: [...state.messages, message]);
         repository.markRead(message.id);
+        unawaited(cache.cacheMessage(message));
         break;
       case RealtimeEventNames.messagesRead:
         final ids = (event.data['message_ids'] as List? ?? []).map((e) => e.toString()).toSet();

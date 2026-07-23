@@ -73,6 +73,25 @@ class AppUser {
     );
   }
 
+  /// Mirrors [fromJson] exactly — used by ChatCacheService to persist an
+  /// already-resolved AppUser (e.g. nested in a cached message/participant)
+  /// and read it back unchanged via the same parser, rather than
+  /// maintaining two separate shapes for the same data.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'first_name': firstName,
+        'middle_name': middleName,
+        'last_name': lastName,
+        'username': username,
+        'phone_number': phoneNumber,
+        'email': email,
+        'about_status': aboutStatus,
+        'photo_url': photoUrl,
+        'is_blocked': isBlocked,
+        'last_seen_at': lastSeenAt?.toIso8601String(),
+        'saved_name': savedName,
+      };
+
   AppUser copyWith({
     String? photoUrl,
     String? aboutStatus,

@@ -75,6 +75,22 @@ class Chat {
     );
   }
 
+  /// Mirrors [fromJson] (its primary/canonical shape — the flat `messages[]`
+  /// and `pivot.*` fallbacks fromJson also accepts don't need mirroring
+  /// since a round trip only ever needs one consistent shape) — see
+  /// AppUser.toJson for why.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'group': group?.toJson(),
+        'participants': participants.map((p) => p.toJson()).toList(),
+        'last_message': lastMessage?.toJson(),
+        'unread_count': unreadCount,
+        'is_muted': isMuted,
+        'is_blocked': isBlocked,
+        'blocked_by_me': blockedByMe,
+        'updated_at': updatedAt?.toIso8601String(),
+      };
+
   Chat copyWith({ChatMessage? lastMessage, int? unreadCount, bool? isMuted}) {
     return Chat(
       id: id,

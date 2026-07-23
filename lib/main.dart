@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:samchat_telecom/samchat_telecom.dart';
 
 import 'app.dart';
+import 'core/cache/chat_cache_service.dart';
 import 'core/config/app_config.dart';
 import 'core/providers/core_providers.dart';
 import 'core/storage/local_prefs_service.dart';
@@ -11,6 +12,7 @@ import 'core/storage/local_prefs_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await LocalPrefsService.create();
+  final chatCache = await ChatCacheService.open();
 
   // Registers SamChat as a self-managed Telecom calling app (idempotent —
   // safe to call on every launch) and gives the native side the one thing
@@ -35,7 +37,10 @@ void main() async {
 
   runApp(
     ProviderScope(
-      overrides: [localPrefsServiceProvider.overrideWithValue(prefs)],
+      overrides: [
+        localPrefsServiceProvider.overrideWithValue(prefs),
+        chatCacheServiceProvider.overrideWithValue(chatCache),
+      ],
       child: const SamChatApp(),
     ),
   );
