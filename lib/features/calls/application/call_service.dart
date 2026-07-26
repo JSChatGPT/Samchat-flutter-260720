@@ -50,26 +50,6 @@ class CallPermissionException implements Exception {
       needsCamera ? 'Camera & microphone permission needed' : 'Microphone permission needed';
 }
 
-/// ICE servers for every peer connection. Always includes public STUN;
-/// appends a TURN relay when [AppConfig.turnUrl] is set (see AppConfig for why
-/// TURN is needed when a direct path is blocked). Built per-call so a config
-/// change takes effect on the next call without a hot restart.
-Map<String, dynamic> _buildIceServers() {
-  final servers = <Map<String, dynamic>>[
-    {'urls': 'stun:stun.l.google.com:19302'},
-    {'urls': 'stun:stun1.l.google.com:19302'},
-  ];
-  if (AppConfig.turnUrl.isNotEmpty) {
-    final urls = AppConfig.turnUrl.split(',').map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
-    servers.add({
-      'urls': urls.length == 1 ? urls.first : urls,
-      if (AppConfig.turnUsername.isNotEmpty) 'username': AppConfig.turnUsername,
-      if (AppConfig.turnCredential.isNotEmpty) 'credential': AppConfig.turnCredential,
-    });
-  }
-  return {'iceServers': servers};
-}
-
 /// Orchestrates WebRTC mesh calls (1:1 and group) on top of the shared
 /// [PusherService] for signaling relay. See API_DOCUMENTATION.md §7 for the
 /// exact REST signaling flow this mirrors. Not a widget/provider itself —
@@ -107,6 +87,41 @@ class CallService {
   // CallRecord.counterpart.
   final Map<String, String> _peerNames = {};
   final Map<String, String> _peerPhotos = {};
+
+  // Fetched once per call and reused for every peer connection in it (a group
+  // call may open several) rather than re-requesting per peer. Reset in
+  // _teardown so the next call fetches a fresh credential.
+  Map<String, dynamic>? _fetchedTurnServer;
+  bool _turnFetchAttempted = false;
+
+  /// ICE servers for this call's peer connections. Always includes public
+  /// STUN; appends a Cloudflare Realtime TURN relay fetched from the backend
+  /// (see CallsRepository.turnCredentials) when available, so calls can
+  /// relay through Cloudflare's network from anywhere — not just whatever LAN
+  /// a self-hosted TURN box happens to be on. Also appends
+  /// [AppConfig.turnUrl] if set, as an extra (optional) static fallback.
+  Future<Map<String, dynamic>> _buildIceServers() async {
+    final servers = <Map<String, dynamic>>[
+      {'urls': 'stun:stun.l.google.com:19302'},
+      {'urls': 'stun:stun1.l.google.com:19302'},
+    ];
+    if (!_turnFetchAttempted) {
+      _turnFetchAttempted = true;
+      _fetchedTurnServer = await repository.turnCredentials();
+    }
+    if (_fetchedTurnServer != null) {
+      servers.add(_fetchedTurnServer!);
+    }
+    if (AppConfig.turnUrl.isNotEmpty) {
+      final urls = AppConfig.turnUrl.split(',').map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
+      servers.add({
+        'urls': urls.length == 1 ? urls.first : urls,
+        if (AppConfig.turnUsername.isNotEmpty) 'username': AppConfig.turnUsername,
+        if (AppConfig.turnCredential.isNotEmpty) 'credential': AppConfig.turnCredential,
+      });
+    }
+    return {'iceServers': servers};
+  }
 
   Future<MediaStream> _ensureLocalStream() async {
     if (localStream != null) return localStream!;
@@ -264,7 +279,8 @@ class CallService {
     final existing = _peerConnections[peerId];
     if (existing != null) return existing;
 
-    final pc = await createPeerConnection({..._buildIceServers(), 'sdpSemantics': 'unified-plan'});
+    final iceServers = await _buildIceServers();
+    final pc = await createPeerConnection({...iceServers, 'sdpSemantics': 'unified-plan'});
     final stream = await _ensureLocalStream();
     for (final track in stream.getTracks()) {
       await pc.addTrack(track, stream);
@@ -547,6 +563,8 @@ class CallService {
     currentCallId = null;
     currentCall = null;
     isCaller = false;
+    _fetchedTurnServer = null;
+    _turnFetchAttempted = false;
   }
 
   void toggleMute() {

@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:samchat_telecom/samchat_telecom.dart';
+
+import '../utils/json_utils.dart';
+import '../../models/user.dart';
 
 /// Sanctum bearer token storage — Keychain on iOS, EncryptedSharedPreferences
 /// on Android. Never put the token in shared_preferences.
@@ -12,6 +16,7 @@ class SecureStorageService {
 
   static const _tokenKey = 'auth_token';
   static const _userIdKey = 'auth_user_id';
+  static const _cachedUserKey = 'auth_cached_user';
 
   Future<String?> readToken() => _storage.read(key: _tokenKey);
 
@@ -29,9 +34,32 @@ class SecureStorageService {
 
   Future<void> writeUserId(String id) => _storage.write(key: _userIdKey, value: id);
 
+  /// The signed-in user's last-known profile — lets AuthNotifier restore a
+  /// full `authenticated` state instantly from disk on cold start, instead
+  /// of gating the whole app on a `GET /user` round trip (see
+  /// AuthNotifier._restoreSession). Written on every successful login and
+  /// every successful background profile refresh; never assumed fresh —
+  /// it's a starting point the network is still asked to confirm/update.
+  Future<AppUser?> readCachedUser() async {
+    final json = await _storage.read(key: _cachedUserKey);
+    if (json == null) return null;
+    try {
+      return AppUser.fromJson(asMap(jsonDecode(json)));
+    } catch (_) {
+      // Corrupt/unparseable — treat exactly like "no cache", never crash
+      // startup over it.
+      return null;
+    }
+  }
+
+  Future<void> writeCachedUser(AppUser user) {
+    return _storage.write(key: _cachedUserKey, value: jsonEncode(user.toJson()));
+  }
+
   Future<void> clear() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _cachedUserKey);
     unawaited(SamchatTelecom.syncAuthToken(null));
   }
 

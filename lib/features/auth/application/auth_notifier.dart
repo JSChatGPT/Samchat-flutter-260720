@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_exception.dart';
@@ -61,21 +63,61 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final PushService push;
   final ChatCacheService cache;
 
+  /// Cache-first: a stored token plus a cached profile is enough to enter
+  /// the authenticated UI immediately, without waiting on (or depending
+  /// the app's entire usability on) a `GET /user` round trip — the
+  /// background call below still runs to refresh the profile and confirm
+  /// the token is genuinely still valid, it just no longer gates entry.
+  ///
+  /// Critically, a failure from that background call only forces a logout
+  /// when it's a real rejection (`ApiException.isUnauthorized`, i.e. the
+  /// server actually said 401) — never for a plain connectivity failure.
+  /// Every *other* authenticated request in the app already gets this
+  /// exact right via AuthInterceptor -> SessionController.onUnauthorized
+  /// (see the constructor above); this was the one call site that instead
+  /// treated "couldn't reach the server" the same as "token rejected,"
+  /// which logged the user out of a perfectly valid session just for
+  /// opening the app offline — also defeating the point of the local chat
+  /// cache, since the router redirects anyone `unauthenticated` straight to
+  /// the login screen before they'd ever see it.
   Future<void> _restoreSession() async {
     final token = await storage.readToken();
     if (token == null || token.isEmpty) {
       state = state.copyWith(status: AuthStatus.unauthenticated);
       return;
     }
+
+    final cachedUser = await storage.readCachedUser();
+    if (cachedUser != null) {
+      state = state.copyWith(status: AuthStatus.authenticated, currentUser: cachedUser);
+      pusher.connect();
+      pusher.subscribe(RealtimeChannels.user(cachedUser.id));
+      push.init();
+    }
+
     try {
       final user = await repository.me();
+      await storage.writeCachedUser(user);
       state = state.copyWith(status: AuthStatus.authenticated, currentUser: user);
-      pusher.connect();
-      pusher.subscribe(RealtimeChannels.user(user.id));
-      push.init();
-    } on ApiException {
-      await storage.clear();
-      state = state.copyWith(status: AuthStatus.unauthenticated);
+      if (cachedUser == null) {
+        pusher.connect();
+        pusher.subscribe(RealtimeChannels.user(user.id));
+        push.init();
+      }
+    } on ApiException catch (e) {
+      if (e.isUnauthorized) {
+        await _forceLogout();
+        return;
+      }
+      // Anything else (no connectivity, timeout, 5xx): if the cache branch
+      // above already painted a profile, leave it exactly as-is. Only when
+      // there was nothing to fall back to (e.g. the very first restore
+      // since this device last logged in, before any profile was ever
+      // cached) does this degrade to the old behavior of not entering the
+      // app — there's genuinely nothing to show either way.
+      if (cachedUser == null) {
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+      }
     }
   }
 
@@ -108,6 +150,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final result = await repository.verifyOtp(phoneNumber: phone, otp: otp);
     await storage.writeToken(result.token);
     await storage.writeUserId(result.user.id);
+    await storage.writeCachedUser(result.user);
     state = state.copyWith(
       status: AuthStatus.authenticated,
       currentUser: result.user,
@@ -120,6 +163,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void updateCurrentUser(AppUser user) {
     state = state.copyWith(currentUser: user);
+    unawaited(storage.writeCachedUser(user));
   }
 
   Future<void> logout() async {

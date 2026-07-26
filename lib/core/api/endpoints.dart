@@ -56,6 +56,7 @@ class Endpoints {
   // Calls
   static const calls = '/calls';
   static const activeCalls = '/calls/active';
+  static const turnCredentials = '/calls/turn-credentials';
   static String call(String callId) => '/calls/$callId';
   static String acceptCall(String callId) => '/calls/$callId/accept';
   static String declineCall(String callId) => '/calls/$callId/decline';

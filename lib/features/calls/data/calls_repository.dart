@@ -24,6 +24,22 @@ class CallsRepository {
     }
   }
 
+  /// Short-lived Cloudflare Realtime TURN credentials for the next call's ICE
+  /// servers (see CallController::turnCredentials on the backend) — minted
+  /// per-request so no long-lived secret ships inside the app. Returns null
+  /// (rather than throwing) when Cloudflare isn't configured or the request
+  /// fails, so a caller can fall back to STUN-only instead of the whole call
+  /// setup failing over a non-essential relay lookup.
+  Future<Map<String, dynamic>?> turnCredentials() async {
+    try {
+      final res = await _dio.get(Endpoints.turnCredentials);
+      final ice = res.data is Map ? res.data['iceServers'] : null;
+      return ice is Map ? asMap(ice) : null;
+    } on DioException {
+      return null;
+    }
+  }
+
   Future<void> accept(String callId) => _post(Endpoints.acceptCall(callId));
   Future<void> decline(String callId) => _post(Endpoints.declineCall(callId));
   Future<void> end(String callId) => _post(Endpoints.endCall(callId));
