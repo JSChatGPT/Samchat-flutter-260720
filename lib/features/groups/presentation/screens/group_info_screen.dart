@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/router/route_names.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../models/chat_participant.dart';
@@ -196,10 +198,25 @@ class _GroupInfoScreenState extends ConsumerState<GroupInfoScreen> {
             return ListTile(
               leading: AppAvatar(photoUrl: p.user.photoUrl, initials: p.user.initials),
               title: Text(p.user.displayName),
-              trailing: p.isAdmin
-                  ? Text('Admin', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12))
-                  : null,
-              onTap: (amIAdmin && p.userId != myUserId) ? () => _showParticipantActions(p, amIAdmin) : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (p.isAdmin)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Text('Admin', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
+                    ),
+                  if (amIAdmin && p.userId != myUserId)
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () => _showParticipantActions(p, amIAdmin),
+                    ),
+                ],
+              ),
+              // Tapping the row itself always opens their profile — WhatsApp-
+              // style — with admin-only management moved to the trailing "⋮"
+              // above so it doesn't shadow that for every other viewer.
+              onTap: () => context.pushNamed(RouteNames.userProfile, pathParameters: {'userId': p.userId}),
             );
           }),
           const Divider(),

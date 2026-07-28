@@ -22,6 +22,7 @@ import '../../features/home_shell/presentation/home_shell_screen.dart';
 import '../../features/meetings/presentation/screens/meeting_list_screen.dart';
 import '../../features/meetings/presentation/screens/schedule_meeting_screen.dart';
 import '../../features/onboarding_contacts/presentation/screens/contact_picker_screen.dart';
+import '../../features/profile/presentation/screens/user_profile_screen.dart';
 import '../../features/sampay/presentation/screens/sampay_home_screen.dart';
 import '../../features/sampay/presentation/screens/sampay_link_screen.dart';
 import '../../features/settings/presentation/screens/about_screen.dart';
@@ -106,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.groupInfo,
         name: RouteNames.groupInfo,
         builder: (context, state) => GroupInfoScreen(chatId: state.pathParameters['chatId']!),
+      ),
+      GoRoute(
+        path: RoutePaths.userProfile,
+        name: RouteNames.userProfile,
+        builder: (context, state) => UserProfileScreen(userId: state.pathParameters['userId']!),
       ),
       GoRoute(
         path: RoutePaths.chatBackupRestore,

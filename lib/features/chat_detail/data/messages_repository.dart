@@ -120,6 +120,17 @@ class MessagesRepository {
     }
   }
 
+  Future<void> report(String messageId, {required String reason, String? details}) async {
+    try {
+      await _dio.post(Endpoints.reportMessage(messageId), data: {
+        'reason': reason,
+        if (details != null && details.isNotEmpty) 'details': details,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<void> markRead(String messageId) async {
     try {
       await _dio.post(Endpoints.markMessageRead(messageId));

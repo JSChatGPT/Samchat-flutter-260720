@@ -27,6 +27,7 @@ class RouteNames {
   static const groupInfo = 'groupInfo';
   static const chatBackupRestore = 'chatBackupRestore';
   static const chatBackupSettings = 'chatBackupSettings';
+  static const userProfile = 'userProfile';
 
   static const statusViewer = 'statusViewer';
   static const statusCreate = 'statusCreate';
@@ -73,6 +74,7 @@ class RoutePaths {
   static const groupInfo = '/chat/:chatId/group-info';
   static const chatBackupRestore = '/chat-backup/restore';
   static const chatBackupSettings = '/settings/chat-backup';
+  static const userProfile = '/user/:userId';
 
   static const statusViewer = '/status-viewer/:userId';
   static const statusCreate = '/status-create';

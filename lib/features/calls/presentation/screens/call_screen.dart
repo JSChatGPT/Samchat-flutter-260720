@@ -281,10 +281,26 @@ class _ActiveViewState extends ConsumerState<_ActiveView> {
     final counterpartName = widget.counterpartName;
     final counterpartPhoto = widget.counterpartPhoto;
     final participants = state.participants.values.toList();
+    final isGroupCall = state.call?.isGroupCall ?? false;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Once a group call goes active the header below collapses to just
+        // the elapsed-time/connecting text — without this, the group's
+        // identity (shown only on the ringing screen) disappears the moment
+        // the first peer connects, even though a WhatsApp-style group call
+        // keeps showing which group you're in, plus how many others are on
+        // it, for the whole duration.
+        if (isGroupCall)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              '$counterpartName · ${participants.length + 1} on call',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Text(

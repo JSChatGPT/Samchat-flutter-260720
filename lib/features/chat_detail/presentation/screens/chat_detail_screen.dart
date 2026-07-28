@@ -296,10 +296,71 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       .deleteMessage(message, forEveryone: true);
                 },
               ),
+            // Reporting your own message makes no sense — mirrors WhatsApp,
+            // which only offers this for messages sent by someone else.
+            if (!isMine)
+              ListTile(
+                leading: Icon(Icons.flag_outlined, color: Theme.of(context).colorScheme.error),
+                title: Text('Report', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _reportMessage(message);
+                },
+              ),
           ],
         ),
       ),
     );
+  }
+
+  static const _reportReasons = ['Spam', 'Inappropriate content', 'Harassment or bullying', 'Other'];
+
+  Future<void> _reportMessage(ChatMessage message) async {
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text('Report this message', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            for (final r in _reportReasons)
+              ListTile(title: Text(r), onTap: () => Navigator.pop(ctx, r)),
+          ],
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+
+    String? details;
+    if (reason == 'Other') {
+      final controller = TextEditingController();
+      details = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Add details'),
+          content: TextField(controller: controller, autofocus: true, maxLines: 3),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Submit')),
+          ],
+        ),
+      );
+      if (details == null || !mounted) return;
+    }
+
+    try {
+      await ref.read(messagesRepositoryProvider).report(message.id, reason: reason, details: details);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message reported. Thank you.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not report message: $e')));
+      }
+    }
   }
 
   Future<void> _openSendPayment(ChatDetailState state, String myUserId, ChatParticipant? other) async {
@@ -356,7 +417,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             : GestureDetector(
                 onTap: chat.isGroup
                     ? () => context.pushNamed(RouteNames.groupInfo, pathParameters: {'chatId': widget.chatId})
-                    : null,
+                    : other != null
+                        ? () => context.pushNamed(RouteNames.userProfile, pathParameters: {'userId': other.userId})
+                        : null,
                 child: Row(
                 children: [
                   Container(
@@ -531,6 +594,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           isMine: isMine,
           myUserId: myUserId,
           senderName: (state.chat?.isGroup ?? false) && !isMine ? message.sender?.displayName : null,
+          onSenderTap: (state.chat?.isGroup ?? false) && !isMine && message.senderId.isNotEmpty
+              ? () => context.pushNamed(RouteNames.userProfile, pathParameters: {'userId': message.senderId})
+              : null,
           onRetry: message.sendStatus == SendStatus.failed
               ? () => ref.read(chatDetailNotifierProvider(widget.chatId).notifier).retry(message)
               : null,

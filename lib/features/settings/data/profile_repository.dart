@@ -62,6 +62,23 @@ class ProfileRepository {
     }
   }
 
+  /// The WhatsApp-style "tap a name/avatar to view this person" screen's
+  /// data source — a deliberately narrower view of a user than [AppUser]
+  /// carries for the signed-in user themself (see UserController::show on
+  /// the backend for exactly which fields are excluded and why).
+  Future<({AppUser user, int sharedGroupsCount})> getUserProfile(String userId) async {
+    try {
+      final res = await _dio.get(Endpoints.user(userId));
+      final json = asMap(res.data['user']);
+      return (
+        user: AppUser.fromJson(json),
+        sharedGroupsCount: asInt(json['shared_groups_count']),
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<List<AppUser>> getBlockedUsers() async {
     try {
       final res = await _dio.get(Endpoints.blockedUsers);

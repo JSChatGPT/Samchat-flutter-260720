@@ -19,6 +19,7 @@ class MessageBubble extends StatelessWidget {
     this.senderName,
     this.onRetry,
     this.onLongPress,
+    this.onSenderTap,
     this.onQuotedMessageTap,
     this.isHighlighted = false,
   });
@@ -29,6 +30,11 @@ class MessageBubble extends StatelessWidget {
   final String? senderName;
   final VoidCallback? onRetry;
   final VoidCallback? onLongPress;
+
+  /// Tapping the sender's name in a group bubble opens their profile —
+  /// WhatsApp-style. Null (and the name renders as plain text) for a 1:1
+  /// chat, where [senderName] itself is never set.
+  final VoidCallback? onSenderTap;
 
   /// Tapping the inline quoted-reply preview jumps to and highlights the
   /// original message — see ChatDetailScreen._scrollToMessage. Receives the
@@ -124,9 +130,12 @@ class MessageBubble extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (senderName != null) ...[
-                Text(
-                  senderName!,
-                  style: textTheme.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w700),
+                GestureDetector(
+                  onTap: onSenderTap,
+                  child: Text(
+                    senderName!,
+                    style: textTheme.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w700),
+                  ),
                 ),
                 const SizedBox(height: 2),
               ],
