@@ -18,6 +18,7 @@ class Endpoints {
   static const privacy = '/users/privacy';
   static const blockedUsers = '/users/blocked';
   static String block(String userId) => '/users/$userId/block';
+  static String reportUser(String userId) => '/users/$userId/report';
 
   // Contacts
   static const contacts = '/contacts';

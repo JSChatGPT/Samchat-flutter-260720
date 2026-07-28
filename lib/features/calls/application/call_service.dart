@@ -171,11 +171,27 @@ class CallService {
   Future<void> _startOutgoing({String? receiverId, String? chatId, required bool video}) async {
     isVideo = video;
     isCaller = true;
-    final call = await repository.initiate(
-      receiverId: receiverId,
-      chatId: chatId,
-      type: video ? CallType.video : CallType.audio,
-    );
+    final CallRecord call;
+    try {
+      // Server-side rejections (e.g. the receiver has blocked/been blocked
+      // by the caller — see CallController::initiate) throw here, before
+      // any call record exists. Left uncaught, this screen — already
+      // pushed and showing "Calling…" — would hang forever with no call to
+      // end and no error surfaced, since nothing downstream sets
+      // currentCallId/currentCall to let endCall() do anything. Catching it
+      // here and reusing the exact same failed+endCall path as every other
+      // outgoing-call failure below keeps this one consistent instead of a
+      // dead screen.
+      call = await repository.initiate(
+        receiverId: receiverId,
+        chatId: chatId,
+        type: video ? CallType.video : CallType.audio,
+      );
+    } catch (e) {
+      _eventsController.add(CallServiceEvent(CallServiceEventType.failed, message: e.toString()));
+      await endCall();
+      return;
+    }
     currentCall = call;
     currentCallId = call.id;
     _handledCallIds.add(call.id);

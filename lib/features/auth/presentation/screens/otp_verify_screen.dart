@@ -33,7 +33,11 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   }
 
   void _startCooldown() {
-    _cooldown = 30;
+    // Must match OtpService::RESEND_COOLDOWN_SECONDS on the backend —
+    // shorter than that lets this button re-enable while the server would
+    // still 429 the request, surfacing a confusing "please wait" error
+    // right after the UI just said resending was fine.
+    _cooldown = 60;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_cooldown <= 1) {

@@ -79,6 +79,17 @@ class ProfileRepository {
     }
   }
 
+  Future<void> reportUser(String userId, {required String reason, String? details}) async {
+    try {
+      await _dio.post(Endpoints.reportUser(userId), data: {
+        'reason': reason,
+        if (details != null && details.isNotEmpty) 'details': details,
+      });
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<List<AppUser>> getBlockedUsers() async {
     try {
       final res = await _dio.get(Endpoints.blockedUsers);

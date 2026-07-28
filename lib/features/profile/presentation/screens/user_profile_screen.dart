@@ -73,6 +73,56 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     }
   }
 
+  static const _reportReasons = ['Spam', 'Fake account', 'Harassment or bullying', 'Inappropriate content', 'Other'];
+
+  Future<void> _reportProfile() async {
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text('Report this profile', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            for (final r in _reportReasons)
+              ListTile(title: Text(r), onTap: () => Navigator.pop(ctx, r)),
+          ],
+        ),
+      ),
+    );
+    if (reason == null || !mounted) return;
+
+    String? details;
+    if (reason == 'Other') {
+      final controller = TextEditingController();
+      details = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Add details'),
+          content: TextField(controller: controller, autofocus: true, maxLines: 3),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Submit')),
+          ],
+        ),
+      );
+      if (details == null || !mounted) return;
+    }
+
+    try {
+      await ref.read(profileRepositoryProvider).reportUser(widget.userId, reason: reason, details: details);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile reported. Thank you.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not report profile: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final myUserId = ref.watch(currentUserIdProvider);
@@ -80,7 +130,20 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     final profileAsync = ref.watch(userProfileProvider(widget.userId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact info')),
+      appBar: AppBar(
+        title: const Text('Contact info'),
+        actions: [
+          if (!isSelf)
+            PopupMenuButton<void>(
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  onTap: _reportProfile,
+                  child: const Text('Report this profile'),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Could not load profile: $e')),
