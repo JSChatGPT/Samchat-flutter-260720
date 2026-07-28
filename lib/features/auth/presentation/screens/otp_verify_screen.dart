@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -93,13 +92,6 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
                 'We sent a 6-digit code to $phone',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              if (kDebugMode) ...[
-                const SizedBox(height: 6),
-                Text(
-                  'Dev backend: OTP is mocked — use 123456',
-                  style: TextStyle(color: scheme.secondary, fontSize: 12),
-                ),
-              ],
               const SizedBox(height: 32),
               if (_verifying)
                 const Center(child: CircularProgressIndicator())
