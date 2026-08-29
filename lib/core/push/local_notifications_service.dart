@@ -44,7 +44,7 @@ class LocalNotificationsService {
   );
 
   Future<void> init({required void Function(String? payload) onTap}) async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/samchat_logo');
     const iosInit = DarwinInitializationSettings();
     await _plugin.initialize(
       const InitializationSettings(android: androidInit, iOS: iosInit),

@@ -192,6 +192,9 @@
              only happens for genuine Flutter plugins (see that package's
              pubspec.yaml doc comment for why). -->
         <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/samchat_logo" />
+        <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="samchat_messages" />
         <meta-data

@@ -153,7 +153,7 @@ class PushService {
       // which the server deliberately never sets.
       final body = await decryptPushMessageBody(data, fallback: data['body']?.toString() ?? '');
       _notifications.showMessageNotification(
-        id: data['message_id']?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+        id: (data['message_id']?.hashCode ?? DateTime.now().millisecondsSinceEpoch) & 0x7FFFFFFF,
         title: data['title']?.toString() ?? 'New message',
         body: body,
         payload: 'message:$chatId',
@@ -163,7 +163,7 @@ class PushService {
       final chatId = data['chat_id']?.toString();
       if (chatId != null && chatId == currentlyOpenChatId) return; // suppress banner for open chat
       _notifications.showMessageNotification(
-        id: data['message_id']?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+        id: (data['message_id']?.hashCode ?? DateTime.now().millisecondsSinceEpoch) & 0x7FFFFFFF,
         title: data['title']?.toString() ?? 'New reaction',
         body: data['body']?.toString() ?? '',
         payload: 'message:$chatId',

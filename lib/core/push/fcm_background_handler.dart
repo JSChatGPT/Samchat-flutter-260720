@@ -49,14 +49,14 @@ Future<void> fcmBackgroundHandler(RemoteMessage message) async {
     // ride along in `data`, not `message.notification` (never set).
     final body = await decryptPushMessageBody(data, fallback: data['body']?.toString() ?? '');
     await notifications.showMessageNotification(
-      id: data['message_id']?.hashCode ?? 0,
+      id: (data['message_id']?.hashCode ?? 0) & 0x7FFFFFFF,
       title: data['title']?.toString() ?? 'New message',
       body: body,
       payload: 'message:${data['chat_id']}',
     );
   } else if (type == 'reaction') {
     await notifications.showMessageNotification(
-      id: data['message_id']?.hashCode ?? 0,
+      id: (data['message_id']?.hashCode ?? 0) & 0x7FFFFFFF,
       title: data['title']?.toString() ?? 'New reaction',
       body: data['body']?.toString() ?? '',
       payload: 'message:${data['chat_id']}',
