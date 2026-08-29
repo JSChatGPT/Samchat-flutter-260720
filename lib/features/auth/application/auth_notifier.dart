@@ -140,8 +140,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> requestOtp(String phoneNumber) async {
-    await repository.requestOtp(phoneNumber);
-    state = state.copyWith(pendingPhoneNumber: phoneNumber);
+    final result = await repository.requestOtp(phoneNumber);
+    state = state.copyWith(
+      pendingPhoneNumber: phoneNumber,
+      pendingEmailHint: result.emailHint,
+      // If no email was sent, explicitly clear any stale hint from a prior
+      // request so the OTP screen never shows a leftover address.
+      clearPendingEmailHint: !result.emailSent,
+    );
   }
 
   Future<void> verifyOtp(String otp) async {
@@ -155,6 +161,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       status: AuthStatus.authenticated,
       currentUser: result.user,
       clearPendingPhoneNumber: true,
+      clearPendingEmailHint: true,
     );
     pusher.connect();
     pusher.subscribe(RealtimeChannels.user(result.user.id));

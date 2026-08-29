@@ -2,7 +2,7 @@ name: samchat_flutter
 description: "SamChat — a modern WhatsApp-style chat app."
 publish_to: 'none'
 
-version: 1.0.1+100
+version: 1.0.2+101
 
 environment:
   sdk: ^3.11.5

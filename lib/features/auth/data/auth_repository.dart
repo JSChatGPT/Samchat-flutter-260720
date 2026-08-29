@@ -33,9 +33,19 @@ class AuthRepository {
     }
   }
 
-  Future<void> requestOtp(String phoneNumber) async {
+  /// Requests an SMS OTP (and optionally an email OTP) for [phoneNumber].
+  ///
+  /// Returns a record with:
+  /// - [emailSent]: whether the backend also sent an email OTP.
+  /// - [emailHint]: a masked email address (e.g. "j***@gmail.com") when
+  ///   [emailSent] is true, otherwise null.
+  Future<({bool emailSent, String? emailHint})> requestOtp(String phoneNumber) async {
     try {
-      await _dio.post(Endpoints.requestOtp, data: {'phone_number': phoneNumber});
+      final res = await _dio.post(Endpoints.requestOtp, data: {'phone_number': phoneNumber});
+      final data = res.data as Map<String, dynamic>? ?? {};
+      final emailSent = data['email_sent'] == true;
+      final emailHint = emailSent ? (data['email_hint'] as String?) : null;
+      return (emailSent: emailSent, emailHint: emailHint);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

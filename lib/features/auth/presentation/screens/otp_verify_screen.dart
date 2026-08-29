@@ -78,10 +78,21 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     }
   }
 
+  /// Build the subtitle explaining which channel(s) the OTP was sent to.
+  String _buildSubtitle(String phone, String? emailHint) {
+    if (emailHint != null && emailHint.isNotEmpty) {
+      return 'We sent a 6-digit code to $phone via SMS and to $emailHint.';
+    }
+    return 'We sent a 6-digit code to $phone via SMS.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final phone = ref.watch(authNotifierProvider).pendingPhoneNumber ?? '';
+    final authState = ref.watch(authNotifierProvider);
+    final phone = authState.pendingPhoneNumber ?? '';
+    final emailHint = authState.pendingEmailHint;
+
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -92,10 +103,27 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
             children: [
               Text('Enter verification code', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
+              // Dynamic subtitle — shows both SMS and email when applicable.
               Text(
-                'We sent a 6-digit code to $phone',
+                _buildSubtitle(phone, emailHint),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              if (emailHint != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.email_outlined, size: 14, color: scheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Also check your inbox at $emailHint',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 32),
               if (_verifying)
                 const Center(child: CircularProgressIndicator())
